@@ -2,6 +2,7 @@
 !.gitattributes
 !.gitignore
 !readme.md
+!LICENSE.txt
 
 !bin/
 !bin/**/
