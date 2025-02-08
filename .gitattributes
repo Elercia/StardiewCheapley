@@ -1,0 +1,63 @@
+# Auto line endings
+* text=auto
+
+# Sources
+*.asm   text
+*.inc   text
+
+# Compiled Object files
+*.slo   binary
+*.lo    binary
+*.o     binary
+*.obj   binary
+
+# Executables & libs
+*.exe   binary
+*.out   binary
+*.app   binary
+*.lib   binary
+*.dll   binary
+*.so    binary
+*.dylib binary
+*.lai   binary
+*.la    binary
+*.a     binary
+
+# Serialisation
+*.json     text
+*.toml     text
+*.xml      text
+*.yaml     text
+*.yml      text
+
+# Scripts
+*.bash     text eol=lf
+*.fish     text eol=lf
+*.sh       text eol=lf
+*.zsh      text eol=lf
+# These are explicitly windows files and should use crlf
+*.bat      text eol=crlf
+*.cmd      text eol=crlf
+*.ps1      text eol=crlf
+
+# Graphics images
+*.png      binary
+*.jpg      binary
+*.jpeg     binary
+*.gif      binary
+*.tif      binary
+*.tiff     binary
+*.ico      binary
+*.svg      binary
+*.eps      binary
+
+# Gameboy 
+*.bin binary
+*.gb binary
+*.1bpp binary
+*.2bpp binary
+*.pal binary
+*.attrmap binary
+*.tilemap binary
+*.palmap binary
+*.patch binary
