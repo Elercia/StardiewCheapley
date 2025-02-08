@@ -18,3 +18,7 @@ bin/win64/Emulicious/*
 !*.asm
 !*.inc
 
+!.vscode/
+!.vscode/launch.json
+!.vscode/settings.json
+!.vscode/tasks.json

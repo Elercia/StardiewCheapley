@@ -1,0 +1,6 @@
+{
+    "emulicious-debugger.emuliciousPath": "bin\\win64\\Emulicious",
+    "rgbdsz80.includePath": [
+        "sources"
+    ]
+}
