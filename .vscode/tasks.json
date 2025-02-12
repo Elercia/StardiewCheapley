@@ -10,7 +10,7 @@
             "options": {
                 "cwd": "${workspaceFolder}/scripts/"
             },
-            "problemMatcher": [],
+            "problemMatcher": ["$rgbdserror", "$rgbdslinkerror"],
             "group": {
                 "kind": "build",
                 "isDefault": true

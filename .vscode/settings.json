@@ -2,5 +2,7 @@
     "emulicious-debugger.emuliciousPath": "bin\\win64\\Emulicious",
     "rgbdsz80.includePath": [
         "sources"
-    ]
+    ],
+    "rgbdsz80.includeAllDocCommentNewlines": true,
+    "rgbdsz80.showInstructionCompletionSuggestions": true
 }
