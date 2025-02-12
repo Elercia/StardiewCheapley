@@ -6,7 +6,15 @@
         {
             "label": "Build",
             "type": "shell",
-            "command": "${workspaceFolder}/scripts/compile.bat",
+            "windows" : {
+                "command": "${workspaceFolder}/scripts/compile.bat",
+            },
+            "linux" :{
+                "command": "${workspaceFolder}/scripts/compile.sh",
+            },
+            "osx":{
+                "command": "${workspaceFolder}/scripts/compile.sh",
+            },
             "options": {
                 "cwd": "${workspaceFolder}/scripts/"
             },
