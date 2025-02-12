@@ -1,4 +1,5 @@
 INCLUDE "hardware.inc"
+INCLUDE "utils.inc"
 
 ; Interupts 
 SECTION "Vblank", 			ROM0[INT_HANDLER_VBLANK]
@@ -50,10 +51,28 @@ SECTION "Licensee code (old)", 	ROM0[$014B]
 
 Section "CodeStart", 		ROM0[$150]
 
+INCLUDE "data/mockUp1.inc" 
+
 EntryPoint:
-	; Shut down audio circuitry
 	ld a, 0
-	ld [rNR52], a
+
+	; Shut down audio circuitry
+	ld [rNR52], 0
+	
+	ld [rSCX], 0
+	ld [rSCY], 0
+
+
+	; Shutdown the LCD
+	ld [rLCDC], 0
+
+	
+
+	ld d, mockUp1_tile_count
+	ld bc, mockUp1_tile_data
+	ld hl, $9000
+	call Memcopy
+
 
 	; Disable interupts
 	di
