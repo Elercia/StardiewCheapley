@@ -8,6 +8,7 @@ cd build
 rm -f *.o *.sym *.map *.gb
 
 # Compile
-../bin/macos/rgbasm -o stardiewcheapley.o -I ../sources ../sources/stardiewcheapley.asm
-../bin/macos/rgblink -o stardiewcheapley.gb --map stardiewcheapley.map --sym stardiewcheapley.sym stardiewcheapley.o 
-../bin/macos/rgbfix -v -p 0xFF stardiewcheapley.gb
+../bin/macos/rgbasm -o stardiewcheapley.o -I ../sources ../sources/stardiewcheapley.asm &&
+../bin/macos/rgblink -o stardiewcheapley.gb --map stardiewcheapley.map --sym stardiewcheapley.sym stardiewcheapley.o &&
+../bin/macos/rgbfix -v -p 0xFF stardiewcheapley.gb &&
+echo Done

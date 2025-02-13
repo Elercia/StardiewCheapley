@@ -51,30 +51,48 @@ SECTION "Licensee code (old)", 	ROM0[$014B]
 
 Section "CodeStart", 		ROM0[$150]
 
-INCLUDE "data/mockUp1.inc" 
+INCLUDE "gfx/mapVillage.inc" 
+INCLUDE "gfx/villagers.inc" 
 
 EntryPoint:
 	ld a, 0
 
 	; Shut down audio circuitry
-	ld [rNR52], 0
+	ld [rNR52], a
 	
-	ld [rSCX], 0
-	ld [rSCY], 0
-
-
-	; Shutdown the LCD
-	ld [rLCDC], 0
-
-	
-
-	ld d, mockUp1_tile_count
-	ld bc, mockUp1_tile_data
-	ld hl, $9000
-	call Memcopy
-
+	ld [rSCX], a
+	ld [rSCY], a
 
 	; Disable interupts
 	di
 
-	halt
+	; Wait for vblank and disable the LCD
+	call TurnOffLCD
+
+	; Set the LCD control register
+	ld a, ( LCDCF_OFF | LCDCF_WIN9C00 | LCDCF_WINOFF | LCDCF_BLK01 | LCDCF_BG9800 | LCDCF_OBJ8 | LCDCF_OBJON | LCDCF_BGON )
+	ld [rLCDC], a
+
+	; Set the palette
+	ld a, %11100100
+	ld [rBGP], a
+
+	ld de, mapVillage_tile_data_size
+	ld bc, mapVillage_tile_data
+	ld hl, $8000
+	call Memcopy
+
+	ld de, mapVillage_tile_map_size
+	ld bc, mapVillage_map_data
+	ld hl, $9800
+	call Memcopy
+
+	ld de, AllVillagers_tile_data_size
+	ld bc, AllVillagers_tile_data_size
+	ld hl, $8000 + mapVillage_tile_data
+	call Memcopy
+
+	call TurnOnLCD
+
+.loop
+	jr .loop
