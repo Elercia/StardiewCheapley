@@ -7,7 +7,7 @@
 !bin/
 !bin/**/
 !bin/**/*
-bin/win64/Emulicious/*
+bin/Emulicious/*
 
 !scripts/
 !scripts/**/
@@ -16,8 +16,10 @@ bin/win64/Emulicious/*
 !sources/
 !sources/**
 !sources/**/*
-!*.asm
-!*.inc
+
+!Data/
+!Data/**
+!Data/**/
 
 !.vscode/
 !.vscode/launch.json
