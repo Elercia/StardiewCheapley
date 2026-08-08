@@ -7,7 +7,8 @@ cd build
 # Erase build files
 rm -f *.o *.sym *.map *.gb
 
-# Compile
+# Compile one object file & link it
+# Fix the ROM header (checksums & co')
 ../bin/macos/rgbasm -o stardiewcheapley.o -I ../sources ../sources/stardiewcheapley.asm &&
 ../bin/macos/rgblink -o stardiewcheapley.gb --map stardiewcheapley.map --sym stardiewcheapley.sym stardiewcheapley.o &&
 ../bin/macos/rgbfix -v -p 0xFF stardiewcheapley.gb &&
