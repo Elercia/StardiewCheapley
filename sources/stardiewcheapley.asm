@@ -18,33 +18,30 @@ SECTION "Header", 			ROM0[$100]
 	nop
 	jp EntryPoint
 
-SECTION "Nintendo logo", 	ROM0[$104]
-	NINTENDO_LOGO
-
 SECTION "Title", 			ROM0[$134] ; 16 chars long
 	db "StardiewCheaple"
 	ds $0143-@, 0
 
 SECTION "Compatibility mode", 	ROM0[$143]
-	db CART_COMPATIBLE_DMG
+	db $00
 
 SECTION "Licensee code (new)", 	ROM0[$144]
 	ds $145 - @, 0
 
 SECTION "SGB flag", 		ROM0[$146]
-	db CART_INDICATOR_GB
+	db $00
 
 SECTION "Cartridge type", 	ROM0[$147] ; TODO To define
-	db CART_ROM
+	db $00
 
 SECTION "ROM size", 		ROM0[$148]
-	db CART_ROM_32KB
+	db $00
 
 SECTION "RAM size", 		ROM0[$149] 
-	db CART_SRAM_NONE
+	db $00
 
 SECTION "Destination", 		ROM0[$014A] 
-	db CART_DEST_NON_JAPANESE
+	db $01
 
 SECTION "Licensee code (old)", 	ROM0[$014B] 
 	ds $014C - @, 0
@@ -55,7 +52,7 @@ INCLUDE "gfx/mapVillage.inc"
 INCLUDE "gfx/villagers.inc" 
 
 EntryPoint:
-	ld a, 0
+	xor a
 
 	; Shut down audio circuitry
 	ld [rNR52], a
