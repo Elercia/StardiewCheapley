@@ -38,9 +38,6 @@ Gameplay_Init:
     call Gameplay_InitMap
     call Gameplay_InitPlayer
 
-    xor a
-    ld [wVBlankInterrupt], a
-
     ret
 
 Gameplay_InitMap:
@@ -59,18 +56,14 @@ Gameplay_InitPlayer:
     ld [wJoypadCurrent], a
     ld [wJoypadPrevious], a
 
-    ld [wPlayerPositionX], a
-    ld [wPlayerPositionX+1], a
-
-    ld [wPlayerPositionY], a
-    ld [wPlayerPositionY+1], a
+    CLEAR_16_BITS wPlayerPositionX
+    CLEAR_16_BITS wPlayerPositionY
 
     ld [wPlayerDirection], a
 
     ret
 
-Gameplay_Update:
-read_inputs:
+UpdateInput:
     ; Get joypad inputs
     ld a, JOYP_GET_CTRL_PAD ; Load P1F_GET_DPAD flag into A to select reading the buttons
     ldh [rJOYP], a
@@ -89,11 +82,12 @@ read_inputs:
     ld a, b
     ld [wJoypadCurrent], a
     
-
 .cleanup_input_read
     ld a, JOYP_GET_NONE ; Load JOYP_GET_NONE flag into A to disable input reading
     ldh [rJOYP], a
-    
+
+    ret
+
 UpdatePlayerDirection:
 .check_right
     ld a, [wJoypadCurrent]
@@ -125,4 +119,10 @@ UpdatePlayerDirection:
     jr .end
 
 .end
+    ret
+
+Gameplay_Update:
+    call UpdateInput
+    call UpdatePlayerDirection
+
     ret
