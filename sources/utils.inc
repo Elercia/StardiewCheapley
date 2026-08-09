@@ -41,6 +41,19 @@ MACRO CLEAR_16_BITS
     ld [hl], 0
 ENDM
 
+
+MACRO COPY_16_BITS ; arg : source addr, dest addr
+    ld hl, \1 
+    ld a, [hl]
+    ld [\2], a
+    inc hl
+    ld a, [hl]
+    ld hl, \2
+    inc hl
+    ld [hl], a
+ENDM
+
+
 WaitVBlank:
     ld hl, wVBlankInterrupt  ; hl = pointer to wVBlankInterrupt
     xor a
