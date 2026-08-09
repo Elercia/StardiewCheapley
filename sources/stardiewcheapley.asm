@@ -48,8 +48,7 @@ SECTION "Licensee code (old)", 	ROM0[$014B]
 
 Section "CodeStart", 		ROM0[$150]
 
-INCLUDE "gfx/mapVillage.inc" 
-INCLUDE "gfx/villagers.inc" 
+INCLUDE "gfx/gfx.asm" 
 
 EntryPoint:
 	xor a
