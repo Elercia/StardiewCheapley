@@ -19,7 +19,7 @@ SECTION "Header", 			ROM0[$100]
 	jp EntryPoint
 
 SECTION "Title", 			ROM0[$134] ; 16 chars long
-	db "StardiewCheaple"
+	db "StardewCheapley"
 	ds $0143-@, 0
 
 SECTION "Compatibility mode", 	ROM0[$143]
@@ -46,10 +46,13 @@ SECTION "Destination", 		ROM0[$014A]
 SECTION "Licensee code (old)", 	ROM0[$014B] 
 	ds $014C - @, 0
 
+SECTION "Checksums", 	ROM0[$014C] 
+	ds $014FC- @, 0
+
 Section "CodeStart", 		ROM0[$150]
 
-INCLUDE "gfx/mapVillage.inc" 
-INCLUDE "gfx/villagers.inc" 
+INCLUDE "gfx/gfx.asm"
+
 INCLUDE "gameplay.asm"
 
 EntryPoint:
