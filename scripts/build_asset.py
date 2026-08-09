@@ -2,6 +2,7 @@ from mimetypes import init
 import subprocess
 import os
 import glob
+from sys import platform
 
 class Tilset:
     input_image : str
@@ -38,10 +39,25 @@ if __name__ == "__main__":
     for f in files:
         os.remove(f)
 
-    gfx_file_content = '''SECTION "GFX", ROM0\n\n'''
+    rgbgfx_executable = ""
+
+    if platform == "linux" or platform == "linux2":
+        # linux
+        rgbgfx_executable = "../bin/linux/rgbgfx"
+    elif platform == "darwin":
+        # OS X
+        rgbgfx_executable = "../bin/macos/rgbgfx"
+    elif platform == "win32":
+        # Windows...
+        rgbgfx_executable = "../bin/win64/rgbgfx"
+
+    gfx_file_content = ("; ---------------------------------\n"
+    "; This file is auto generated. Do not edit\n"
+    "; ---------------------------------\n\n"
+    "SECTION \"GFX\", ROM0\n\n")
     
     for tileset in standalone_tilesets:
-        subprocess.run(["../bin/macos/rgbgfx",
+        subprocess.run([rgbgfx_executable,
                         "--auto-palette", 
                         "--group-outputs",
                         "--unique-tiles",
@@ -53,10 +69,11 @@ if __name__ == "__main__":
             "{tilesetname}:\n"
             "    INCBIN \"gfx/{tilesetname}.2bpp\"\n"
             "   .end\n"
+            "DEF {tilesetname}_size EQU {tilesetname}.end - {tilesetname}\n"
             "\n").format(tilesetname = tileset.name)
         
     for tilemap in tilemaps:
-        subprocess.run(["../bin/macos/rgbgfx", 
+        subprocess.run([rgbgfx_executable, 
                         "--auto-palette",
                         "--group-outputs",
                         "--auto-attr-map",
@@ -69,7 +86,9 @@ if __name__ == "__main__":
         gfx_file_content += (
             "{tilesetname}_tilemap:\n"
             "    INCBIN \"gfx/{tilesetname}.tilemap\"\n"
-            "    .end\n").format(tilesetname = tilemap.name)
+            "    .end\n"
+            "DEF {tilesetname}_tilemap_size EQU {tilesetname}_tilemap.end - {tilesetname}_tilemap\n"
+            "").format(tilesetname = tilemap.name)
 
     with open("../sources/gfx/gfx.asm", "w") as f:
         f.write(gfx_file_content)

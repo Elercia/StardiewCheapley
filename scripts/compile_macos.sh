@@ -1,3 +1,4 @@
+python3 build_asset.py
 
 # Go to the build folder inside the root folder (working dir should be the script folder)
 cd ..
