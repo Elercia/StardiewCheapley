@@ -1,5 +1,8 @@
 Section "Utils", 		ROM0
 
+DEF TILE_DATA_START_ADDR EQU TILEBLOCK0
+DEF TILE_MAP_START_ADDR EQU TILEMAP0
+
 ; Copy DE bytes from BC to HL
 Memcopy:
 .loop:
@@ -7,15 +10,22 @@ Memcopy:
     ld [hl], a 
     inc hl
     inc bc
-    dec de ; DEC is not setting ant flags
+    dec de ; DEC is not setting any flags
     ld a, e ; So we need to check if any e or d is 0 
 	or a, d
     jp nz, .loop
     ret
 
+MACRO MEMCOPY
+    ld de, \3
+	ld bc, \1
+	ld hl, \2
+	call Memcopy
+ENDM
+
 WaitVBlank:
     ld a, [rLY]
-    cp a, SCRN_Y
+    cp a, SCREEN_HEIGHT_PX
     jp c, WaitVBlank
     ret
 
@@ -25,7 +35,7 @@ WaitVBlank:
 TurnOffLCD:
     call WaitVBlank
     ld a, [rLCDC]
-    res LCDCB_ON, a
+    res B_LCDC_ENABLE, a
 	ld [rLCDC], a
     ret
 
@@ -34,6 +44,6 @@ TurnOffLCD:
 ; invalidates aÒ
 TurnOnLCD:
     ld a, [rLCDC]
-    set LCDCB_ON, a
+    set B_LCDC_ENABLE, a
     ld [rLCDC], a
     ret

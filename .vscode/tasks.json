@@ -10,10 +10,10 @@
                 "command": "${workspaceFolder}/scripts/compile.bat",
             },
             "linux" :{
-                "command": "${workspaceFolder}/scripts/compile.sh",
+                "command": "${workspaceFolder}/scripts/compile_linux.sh",
             },
             "osx":{
-                "command": "${workspaceFolder}/scripts/compile.sh",
+                "command": "${workspaceFolder}/scripts/compile_macos.sh",
             },
             "options": {
                 "cwd": "${workspaceFolder}/scripts/"
