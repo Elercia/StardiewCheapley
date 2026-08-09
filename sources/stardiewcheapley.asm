@@ -67,7 +67,7 @@ EntryPoint:
 	call TurnOffLCD
 
 	; Set the LCD control register
-	ld a, ( LCDCF_OFF | LCDCF_WIN9C00 | LCDCF_WINOFF | LCDCF_BLK01 | LCDCF_BG9800 | LCDCF_OBJ8 | LCDCF_OBJON | LCDCF_BGON )
+	ld a, ( LCDC_OFF | LCDC_WIN_9800 | LCDC_WIN_ON | LCDC_BLOCK01 | LCDC_BG_9800 | LCDC_OBJ_8 | LCDC_OBJ_ON | LCDC_BG_ON )
 	ld [rLCDC], a
 
 	; Set the palette
