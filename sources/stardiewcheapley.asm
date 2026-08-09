@@ -6,6 +6,9 @@ SECTION "Header", 			ROM0[$100]
 	nop
 	jp EntryPoint
 
+SECTION "Nintendo logo", 	ROM0[$104]
+	ds $134 - @, 0
+
 SECTION "Title", 			ROM0[$134] ; 16 chars long
 	db "StardewCheapley"
 	ds $0143-@, 0
@@ -40,17 +43,56 @@ SECTION "Checksums", 	ROM0[$014C]
 Section "CodeStart", 		ROM0[$150]
 
 INCLUDE "gfx/gfx.asm"
-
 INCLUDE "gameplay.asm"
 
+; OAM DMA Routine
+; Reserve into HRAM some memory space to copy the code of CopyDMARoutine
+
+SECTION "Shadow OAM", WRAM0,ALIGN[8]
+wShadowOAM:
+  ds 4 * 40 ;
+
+; ROM Storage of the routine (and copy utility function)
+SECTION "OAM DMA routine", ROM0
+CopyDMARoutine:
+  ld  hl, CopyShadowOAMToOAM_ROM
+  ld  b, CopyShadowOAMToOAM_ROM.end - CopyShadowOAMToOAM_ROM ; Number of bytes to copy
+  ld  c, LOW(CopyShadowOAMToOAM) ; Low byte of the destination address
+.copy
+  ld  a, [hli]
+  ldh [c], a
+  inc c
+  dec b
+  jr  nz, .copy
+  ret
+
+CopyShadowOAMToOAM_ROM:
+  ldh [rDMA], a
+  
+  ld  a, 40
+.wait
+  dec a
+  jr  nz, .wait
+  ret
+.end
+
+SECTION "OAM DMA", HRAM
+
+CopyShadowOAMToOAM::
+  ds CopyShadowOAMToOAM_ROM.end - CopyShadowOAMToOAM_ROM ; Reserve space to copy the routine to
+
+Section "EntryPoint section", ROM0
 EntryPoint:
 	xor a
 
 	; Shut down audio circuitry
-	ld [rNR52], a
+	ld [rAUDENA], a
 	
 	ld [rSCX], a
 	ld [rSCY], a
+
+	ld [rWX], a
+	ld [rWY], a
 
 	; Enable interupts, only VBlanks tho
 	ei
@@ -59,6 +101,17 @@ EntryPoint:
 
 	; Wait for vblank and disable the LCD
 	call TurnOffLCD
+
+	; Setup OAM DMA routine
+	; clear shadow OAM
+	; clear OAM (using DMA)
+	call CopyDMARoutine
+	ld de, OAM_SIZE
+	ld hl, wShadowOAM
+	call MemClear
+
+	ld  a, HIGH(wShadowOAM)
+ 	call CopyShadowOAMToOAM
 
 	; Disable interupts
 	di
@@ -71,15 +124,19 @@ EntryPoint:
 	ld a, %11100100
 	ld [rBGP], a
 
-	ld [rWX], a
-	ld [rWY], a
-
 	call Gameplay_Init
 
+	xor a
+    ld [wVBlankInterrupt], a
 	call TurnOnLCD
 
 	ei ; Enable interupts, used for Vblanks
 
 .loop
 	call Gameplay_Update
+
+	call WaitVBlank
+	ld  a, HIGH(wShadowOAM)
+ 	call CopyShadowOAMToOAM
+
 	jr .loop
