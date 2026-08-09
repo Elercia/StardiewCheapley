@@ -16,11 +16,27 @@ Memcopy:
     jp nz, .loop
     ret
 
+; Clear DE bytes from HL
+MemClear:
+.loop:
+    ld [hl], 0 
+    inc hl
+    dec de ; DEC is not setting any flags
+    ld a, e ; So we need to check if any e or d is 0 
+	or a, d
+    jp nz, .loop
+    ret
+
 MACRO MEMCOPY
     ld de, \3
 	ld bc, \1
 	ld hl, \2
 	call Memcopy
+ENDM
+
+MACRO CLEAR_16_BITS
+    ld hl, \1 
+    ld [hl], 0
 ENDM
 
 WaitVBlank:
