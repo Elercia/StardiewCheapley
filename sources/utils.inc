@@ -37,6 +37,8 @@ ENDM
 MACRO CLEAR_16_BITS
     ld hl, \1 
     ld [hl], 0
+    inc hl
+    ld [hl], 0
 ENDM
 
 WaitVBlank:
