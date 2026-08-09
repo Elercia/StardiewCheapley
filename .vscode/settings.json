@@ -1,5 +1,5 @@
 {
-    "emulicious-debugger.emuliciousPath": "./bin/Emulicious/Emulicious.jar",
+    "emulicious-debugger.emuliciousPath": "/home/vincent/Documents/StardiewCheapley/bin/Emulicious",
     "rgbdsz80.includePath": [
         "sources"
     ],

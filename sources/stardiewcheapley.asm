@@ -48,7 +48,9 @@ SECTION "Licensee code (old)", 	ROM0[$014B]
 
 Section "CodeStart", 		ROM0[$150]
 
-INCLUDE "gfx/gfx.asm" 
+INCLUDE "gfx/mapVillage.inc" 
+INCLUDE "gfx/villagers.inc" 
+INCLUDE "gameplay.asm"
 
 EntryPoint:
 	xor a
@@ -73,22 +75,13 @@ EntryPoint:
 	ld a, %11100100
 	ld [rBGP], a
 
-	ld de, mapVillage_tile_data_size
-	ld bc, mapVillage_tile_data
-	ld hl, $8000
-	call Memcopy
+	ld [rWX], a
+	ld [rWY], a
 
-	ld de, mapVillage_tile_map_size
-	ld bc, mapVillage_map_data
-	ld hl, $9800
-	call Memcopy
-
-	ld de, AllVillagers_tile_data_size
-	ld bc, AllVillagers_tile_data_size
-	ld hl, $8000 + mapVillage_tile_data
-	call Memcopy
+	call Gameplay_Init
 
 	call TurnOnLCD
 
 .loop
+	call Gameplay_Update
 	jr .loop
