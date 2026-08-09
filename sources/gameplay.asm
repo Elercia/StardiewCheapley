@@ -15,6 +15,9 @@ DEF PLAYER_FACE_UP EQU 1
 DEF PLAYER_FACE_RIGHT EQU 2
 DEF PLAYER_FACE_LEFT EQU 3
 
+DEF PLAYER_OAM_INDEX EQU 0
+DEF PLAYER_TILE_ID EQU LOW( village_tileset_size / 16 ) ; one tile is 2 bytes
+
 ; Interupts 
 SECTION "Vblank", 			ROM0[INT_HANDLER_VBLANK]
     push af
@@ -56,8 +59,15 @@ Gameplay_InitPlayer:
     ld [wJoypadCurrent], a
     ld [wJoypadPrevious], a
 
+    
     CLEAR_16_BITS wPlayerPositionX
     CLEAR_16_BITS wPlayerPositionY
+
+    ld a, 56
+    ld [wPlayerPositionX], a
+
+    ld a, 56
+    ld [wPlayerPositionY], a
 
     ld [wPlayerDirection], a
 
@@ -125,4 +135,16 @@ Gameplay_Update:
     call UpdateInput
     call UpdatePlayerDirection
 
+    ; Update player OAM Data
+    ld a, [wPlayerPositionY] ; TODO Position is relative to window postion
+    ld [wShadowOAM+(PLAYER_OAM_INDEX * OBJ_SIZE)+OAMA_Y], a
+
+    ld a, [wPlayerPositionX]
+    ld [wShadowOAM+(PLAYER_OAM_INDEX * OBJ_SIZE)+OAMA_X], a
+
+    ld a, PLAYER_TILE_ID
+    ld [wShadowOAM+(PLAYER_OAM_INDEX * OBJ_SIZE)+OAMA_TILEID], a
+    
+    ld a, 0b00000001
+    ld [wShadowOAM+(PLAYER_OAM_INDEX * OBJ_SIZE)+OAMA_FLAGS], a
     ret
