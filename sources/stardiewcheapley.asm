@@ -1,18 +1,6 @@
 INCLUDE "hardware.inc"
 INCLUDE "utils.inc"
 
-; Interupts 
-SECTION "Vblank", 			ROM0[INT_HANDLER_VBLANK]
-	reti
-SECTION "LCDC", 			ROM0[INT_HANDLER_STAT]
-	reti
-SECTION "Timer_Overflow", 	ROM0[INT_HANDLER_TIMER]
-	reti
-SECTION "Serial", 			ROM0[INT_HANDLER_SERIAL]
-	reti
-SECTION "Joypad", 			ROM0[INT_HANDLER_JOYPAD]
-	reti
-
 ; 0100-014F — Cartridge header
 SECTION "Header", 			ROM0[$100]
 	nop
@@ -64,11 +52,16 @@ EntryPoint:
 	ld [rSCX], a
 	ld [rSCY], a
 
-	; Disable interupts
-	di
+	; Enable interupts, only VBlanks tho
+	ei
+	ld hl, rIE
+	ld [hl], $01
 
 	; Wait for vblank and disable the LCD
 	call TurnOffLCD
+
+	; Disable interupts
+	di
 
 	; Set the LCD control register
 	ld a, ( LCDC_OFF | LCDC_WIN_9800 | LCDC_WIN_ON | LCDC_BLOCK01 | LCDC_BG_9800 | LCDC_OBJ_8 | LCDC_OBJ_ON | LCDC_BG_ON )
@@ -84,6 +77,8 @@ EntryPoint:
 	call Gameplay_Init
 
 	call TurnOnLCD
+
+	ei ; Enable interupts, used for Vblanks
 
 .loop
 	call Gameplay_Update

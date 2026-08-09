@@ -2,6 +2,9 @@ SECTION "Joypad Variables", WRAM0
 wJoypadCurrent:: db ; TODO Move to another file "input.asm" 
 wJoypadPrevious:: db
 
+SECTION "Interupts Variables", WRAM0
+wVBlankInterrupt:: db
+
 SECTION "Player Variables", WRAM0
 wPlayerPositionX:: dw ; 2 bytes for pixel position in world
 wPlayerPositionY:: dw
@@ -12,12 +15,31 @@ DEF PLAYER_FACE_UP EQU 1
 DEF PLAYER_FACE_RIGHT EQU 2
 DEF PLAYER_FACE_LEFT EQU 3
 
+; Interupts 
+SECTION "Vblank", 			ROM0[INT_HANDLER_VBLANK]
+    push af
+    ld a, 1
+    ld [wVBlankInterrupt], a
+    pop af
+	reti
+SECTION "LCDC", 			ROM0[INT_HANDLER_STAT]
+	reti
+SECTION "Timer_Overflow", 	ROM0[INT_HANDLER_TIMER]
+	reti
+SECTION "Serial", 			ROM0[INT_HANDLER_SERIAL]
+	reti
+SECTION "Joypad", 			ROM0[INT_HANDLER_JOYPAD]
+	reti
+
 
 SECTION "Player Code", ROM0
 
 Gameplay_Init:
     call Gameplay_InitMap
     call Gameplay_InitPlayer
+
+    xor a
+    ld [wVBlankInterrupt], a
 
     ret
 
