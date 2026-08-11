@@ -12,20 +12,20 @@
 		"Background.png"
 	],
 	"entities": {
-		"Entity": [
+		"PlayerStartPosition": [
 			{
-				"id": "Entity",
+				"id": "PlayerStartPosition",
 				"iid": "f109d4c0-6fc0-11f1-8b19-cde321d4232b",
 				"layer": "Entities",
-				"x": 60,
-				"y": 124,
+				"x": 44,
+				"y": 116,
 				"width": 8,
 				"height": 8,
 				"color": 12470831,
 				"customFields": {
 					"Tile": {
 						"tilesetUid": 2,
-						"x": 16,
+						"x": 0,
 						"y": 0,
 						"w": 8,
 						"h": 8

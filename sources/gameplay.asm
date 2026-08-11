@@ -16,7 +16,7 @@ DEF PLAYER_FACE_RIGHT EQU 2
 DEF PLAYER_FACE_LEFT EQU 3
 
 DEF PLAYER_OAM_INDEX EQU 0
-DEF PLAYER_TILE_ID EQU LOW( village_tileset_size / 16 ) ; one tile is 2 bytes
+DEF PLAYER_TILE_ID EQU LOW( map_village_tileset_size / 16 ) ; one tile is 2 bytes
 
 ; Interupts 
 SECTION "Vblank", 			ROM0[INT_HANDLER_VBLANK]
@@ -46,8 +46,8 @@ Gameplay_Init:
 Gameplay_InitMap:
 
     ; Copy tile data (village tiles & player tiles)
-    MEMCOPY village_tileset, TILE_DATA_START_ADDR, village_tileset_size
-	MEMCOPY character_tileset, TILE_DATA_START_ADDR + village_tileset_size, character_tileset_size
+    MEMCOPY map_village_tileset, TILE_DATA_START_ADDR, map_village_tileset_size
+	MEMCOPY character_tileset, TILE_DATA_START_ADDR + map_village_tileset_size, character_tileset_size
 
     MEMCOPY map_village_tilemap, TILE_MAP_START_ADDR, map_village_tilemap
 
