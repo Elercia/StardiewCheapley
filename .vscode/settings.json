@@ -1,8 +1,28 @@
 {
-    "emulicious-debugger.emuliciousPath": "/home/vincent/Documents/StardiewCheapley/bin/Emulicious",
+    "emulicious-debugger.emuliciousPath": "{$workspaceFolder}/bin/Emulicious",
     "rgbdsz80.includePath": [
         "sources"
     ],
     "rgbdsz80.includeAllDocCommentNewlines": true,
-    "rgbdsz80.showInstructionCompletionSuggestions": true
+    "rgbdsz80.showInstructionCompletionSuggestions": true,
+    "rgbdsz80.formatting.capitalization": {
+        "language": "lower",
+        "language.keyword.sectiondeclaration": "upper",
+        "language.keyword.preprocessor" : "upper",
+        "language.hex" : "upper"
+    },
+    "spellright.language": [
+        "en"
+    ],
+    "spellright.documentTypes": [
+        "markdown",
+        "latex",
+        "plaintext",
+        "gbz80"
+    ],
+    "spellright.parserByClass": {
+        "gbz80": {
+            "parser": "code"
+        }
+    }
 }
