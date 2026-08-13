@@ -40,7 +40,7 @@ SECTION "Licensee code (old)", 	ROM0[$014B]
 SECTION "Checksums", 	ROM0[$014C] 
 	ds $014FC- @, 0
 
-Section "CodeStart", 		ROM0[$150]
+SECTION "CodeStart", 		ROM0[$150]
 
 INCLUDE "gfx/gfx.asm"
 INCLUDE "gameplay.asm"
@@ -57,7 +57,7 @@ SECTION "OAM DMA routine", ROM0
 CopyDMARoutine:
   ld  hl, CopyShadowOAMToOAM_ROM
   ld  b, CopyShadowOAMToOAM_ROM.end - CopyShadowOAMToOAM_ROM ; Number of bytes to copy
-  ld  c, LOW(CopyShadowOAMToOAM) ; Low byte of the destination address
+  ld  c, low(CopyShadowOAMToOAM) ; Low byte of the destination address
 .copy
   ld  a, [hli]
   ldh [c], a
@@ -81,7 +81,7 @@ SECTION "OAM DMA", HRAM
 CopyShadowOAMToOAM::
   ds CopyShadowOAMToOAM_ROM.end - CopyShadowOAMToOAM_ROM ; Reserve space to copy the routine to
 
-Section "EntryPoint section", ROM0
+SECTION "EntryPoint section", ROM0
 EntryPoint:
 	xor a
 
@@ -110,14 +110,14 @@ EntryPoint:
 	ld hl, wShadowOAM
 	call MemClear
 
-	ld  a, HIGH(wShadowOAM)
+	ld  a, high(wShadowOAM)
  	call CopyShadowOAMToOAM
 
 	; Disable interupts
 	di
 
 	; Set the LCD control register
-	ld a, ( LCDC_OFF | LCDC_WIN_9800 | LCDC_WIN_ON | LCDC_BLOCK01 | LCDC_BG_9800 | LCDC_OBJ_8 | LCDC_OBJ_ON | LCDC_BG_ON )
+	ld a, ( LCDC_OFF | LCDC_WIN_9800 | LCDC_WIN_OFF | LCDC_BLOCK01 | LCDC_BG_9800 | LCDC_OBJ_8 | LCDC_OBJ_ON | LCDC_BG_ON )
 	ld [rLCDC], a
 
 	; Set the palette
@@ -136,7 +136,7 @@ EntryPoint:
 	call Gameplay_Update
 
 	call WaitVBlank
-	ld  a, HIGH(wShadowOAM)
+	ld  a, high(wShadowOAM)
  	call CopyShadowOAMToOAM
 
 	jr .loop
