@@ -139,4 +139,10 @@ EntryPoint:
 	ld  a, high(wShadowOAM)
  	call CopyShadowOAMToOAM
 
+	ld a, [wShadowScreenPositionX]
+	ld [rSCX], a
+
+	ld a, [wShadowScreenPositionY]
+	ld [rSCY], a
+
 	jr .loop

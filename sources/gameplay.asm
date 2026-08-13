@@ -2,21 +2,30 @@ SECTION "Joypad Variables", WRAM0
 wJoypadCurrent:: db ; TODO Move to another file "input.asm" 
 wJoypadPrevious:: db
 
-SECTION "Interupts Variables", WRAM0
+SECTION "Interrupts Variables", WRAM0
 wVBlankInterrupt:: db
 
 SECTION "Player Variables", WRAM0
-wPlayerPositionX:: dw ; 2 bytes for pixel position in world
+; 2 bytes for pixel position in world. 
+; Have it as u16  is not useful right now but will be necessary when we will be using streaming
+;   And its challenging
+wPlayerPositionX:: dw 
 wPlayerPositionY:: dw
 wPlayerDirection:: db ; 1 byte for direction (only uses 2 bits)
 
-DEF PLAYER_FACE_DOWN EQU 0
-DEF PLAYER_FACE_UP EQU 1 
-DEF PLAYER_FACE_RIGHT EQU 2
-DEF PLAYER_FACE_LEFT EQU 3
+; Shadowing of rSCX & rSCY to update only in vblanks (to avoid tearing)
+wShadowScreenPositionX:: db
+wShadowScreenPositionY:: db
+
+DEF PLAYER_SPEED EQU 1
+
+DEF PLAYER_FACE_LEFT EQU 0
+DEF PLAYER_FACE_RIGHT EQU 1
+DEF PLAYER_FACE_DOWN EQU 2
+DEF PLAYER_FACE_UP EQU 3
 
 DEF PLAYER_OAM_INDEX EQU 0
-DEF PLAYER_TILE_ID EQU LOW( map_village_tileset_size / 16 ) ; one tile is 2 bytes
+DEF PLAYER_START_TILE_ID EQU low( map_village_tileset_size / TILE_SIZE ) 
 
 ; Interupts 
 SECTION "Vblank", 			ROM0[INT_HANDLER_VBLANK]
@@ -37,13 +46,13 @@ SECTION "Joypad", 			ROM0[INT_HANDLER_JOYPAD]
 
 SECTION "Player Code", ROM0
 
-Gameplay_Init:
+Gameplay_Init::
     call Gameplay_InitMap
     call Gameplay_InitPlayer
 
     ret
 
-Gameplay_InitMap:
+Gameplay_InitMap::
 
     ; Copy tile data (village tiles & player tiles)
     MEMCOPY map_village_tileset, TILE_DATA_START_ADDR, map_village_tileset_size
@@ -53,33 +62,35 @@ Gameplay_InitMap:
 
     ret
 
-Gameplay_InitPlayer:
+Gameplay_InitPlayer::
     xor a
 
     ld [wJoypadCurrent], a
     ld [wJoypadPrevious], a
-
+    ld [wShadowScreenPositionX], a
+    ld [wShadowScreenPositionY], a
     
     CLEAR_16_BITS wPlayerPositionX
     CLEAR_16_BITS wPlayerPositionY
 
-    ld a, 56
+    ld a, 56 ; TODO Load the value from entity_start_position (from ldtk)
     ld [wPlayerPositionX], a
 
     ld a, 56
     ld [wPlayerPositionY], a
 
+    ld a, PLAYER_FACE_DOWN
     ld [wPlayerDirection], a
 
     ret
 
-UpdateInput:
+UpdateInput::
     ; Get joypad inputs
     ld a, JOYP_GET_CTRL_PAD ; Load P1F_GET_DPAD flag into A to select reading the buttons
-    ldh [rJOYP], a
+    ld [rJOYP], a
 
     REPT 4 ; Repeat to stabilize input reading after select
-    ldh a, [rJOYP] ; Read the joypad inputs
+    ld a, [rJOYP] ; Read the joypad inputs
     ENDR
 
     ld b, a ; Save the read data into b
@@ -98,53 +109,156 @@ UpdateInput:
 
     ret
 
-UpdatePlayerDirection:
+    ; TODO There is a lot of things optimizable here
+UpdatePlayerPositionAndDirection::
+    ; b: x speed, c: y speed
+    ld bc, 0
+
 .check_right
     ld a, [wJoypadCurrent]
-    and $01 ; Select right
-    jr z, .check_left
+    and JOYP_RIGHT ; Select right
+    jr nz, .check_left
+    ; Player facing right
     ld a, PLAYER_FACE_RIGHT
     ld [wPlayerDirection], a
-    jr .end
+
+    ld b, PLAYER_SPEED
+
+    jr .end_check_input
 .check_left
     ld a, [wJoypadCurrent]
-    and $02 ; Select left
-    jr z, .check_up
+    and JOYP_LEFT ; Select left
+    jr nz, .check_up
+
+    ; Player facing left
     ld a, PLAYER_FACE_LEFT
     ld [wPlayerDirection], a
-    jr .end
+
+    ld b, -PLAYER_SPEED
+
+    jr .end_check_input
 .check_up
     ld a, [wJoypadCurrent]
-    and $03 ; Select up
-    jr z, .check_down
+    and JOYP_UP ; Select up
+    jr nz, .check_down
+
+    ; Player facing up
     ld a, PLAYER_FACE_UP
     ld [wPlayerDirection], a
-    jr .end
+
+    ld c, -PLAYER_SPEED
+
+    jr .end_check_input
 .check_down
     ld a, [wJoypadCurrent]
-    and $04 ; Select down
-    jr z, .end
+    and JOYP_DOWN; Select down
+    jr nz, .end_check_input
+
+    ; Player facing down
     ld a, PLAYER_FACE_DOWN
     ld [wPlayerDirection], a
-    jr .end
 
-.end
+    ld c, PLAYER_SPEED
+
+    jr .end_check_input
+
+.end_check_input
+
+    ; Update 16 bits X
+    ld a, [wPlayerPositionX]
+    add b
+    ld [wPlayerPositionX], a
+
+    ld a, [wPlayerPositionX+1]
+    adc 0
+    ld [wPlayerPositionX+1], a
+
+    ; Update 16 bits Y
+    ld a, [wPlayerPositionY]
+    add c
+    ld [wPlayerPositionY], a
+
+    ld a, [wPlayerPositionY+1]
+    adc 0
+    ld [wPlayerPositionY+1], a
+
+    ; 1) if Player position is between 0 and SCREEN_WIDTH_PX/2;SCREEN_HEIGHT_PX/2
+    ;   ScreenPos should be lock to 0;0
+    ; 2) if Player position is between TILEMAP_WIDTH_PX - SCREEN_WIDTH_PX;TILEMAP_HEIGHT_PX - SCREEN_HEIGHT_PX and 256;256
+    ;   Screen position should be locked to  TILEMAP_WIDTH_PX - SCREEN_WIDTH_PX;TILEMAP_HEIGHT_PX - SCREEN_HEIGHT_PX
+    ; 3) Otherwize, position should be 
+    ;   PlayerX-(SCREEN_WIDTH_PX/2);PlayerY-(SCREEN_HEIGHT_PX/2)
+
+    ; 1)
+    ld a, [wPlayerPositionX]
+    cp (SCREEN_WIDTH_PX/2)
+    jr nc, .x_above_half_screen
+    xor a 
+    ld [wShadowScreenPositionX], a
+    jr .check_y_screen_pos
+.x_above_half_screen
+    ; 2)
+    ld a, [wPlayerPositionX]
+    cp TILEMAP_WIDTH_PX - (SCREEN_WIDTH_PX / 2)
+    jr c, .x_in_between
+    ld a, TILEMAP_WIDTH_PX - (SCREEN_WIDTH_PX)
+    ld [wShadowScreenPositionX], a
+    jr .check_y_screen_pos
+.x_in_between
+    ; 3)
+    ld a, [wPlayerPositionX]
+    sub a, SCREEN_WIDTH_PX/2
+    ld [wShadowScreenPositionX], a
+
+.check_y_screen_pos
+    ld a, [wPlayerPositionY]
+    cp (SCREEN_HEIGHT_PX/2)
+    jr nc, .y_above_half_screen
+    xor a 
+    ld [wShadowScreenPositionY], a
+    jr .end_camera_check
+.y_above_half_screen
+    ; 2)
+    ld a, [wPlayerPositionY]
+    cp TILEMAP_HEIGHT_PX - (SCREEN_HEIGHT_PX / 2)
+    jr c, .y_in_between
+    ld a, TILEMAP_HEIGHT_PX - (SCREEN_HEIGHT_PX)
+    ld [wShadowScreenPositionY], a
+    jr .end_camera_check
+.y_in_between
+    ; 3)
+    ld a, [wPlayerPositionY]
+    sub a, SCREEN_HEIGHT_PX/2
+    ld [wShadowScreenPositionY], a
+   
+
+.end_camera_check
+
     ret
 
-Gameplay_Update:
+Gameplay_Update::
     call UpdateInput
-    call UpdatePlayerDirection
+    call UpdatePlayerPositionAndDirection
 
     ; Update player OAM Data
-    ld a, [wPlayerPositionY] ; TODO Position is relative to window postion
+    ld a, [wShadowScreenPositionY]
+    ld b, a
+    ld a, [wPlayerPositionY]
+    sub b
     ld [wShadowOAM+(PLAYER_OAM_INDEX * OBJ_SIZE)+OAMA_Y], a
 
+    ld a, [wShadowScreenPositionX]
+    ld b, a
     ld a, [wPlayerPositionX]
+    sub b
     ld [wShadowOAM+(PLAYER_OAM_INDEX * OBJ_SIZE)+OAMA_X], a
 
-    ld a, PLAYER_TILE_ID
+    ld a, [wPlayerDirection]
+    ld b, PLAYER_START_TILE_ID
+    add a, b
     ld [wShadowOAM+(PLAYER_OAM_INDEX * OBJ_SIZE)+OAMA_TILEID], a
     
     ld a, 0b00000001
     ld [wShadowOAM+(PLAYER_OAM_INDEX * OBJ_SIZE)+OAMA_FLAGS], a
+
     ret
