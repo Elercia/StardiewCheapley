@@ -53,6 +53,50 @@ MACRO COPY_16_BITS ; arg : source addr, dest addr
     ld [hl], a
 ENDM
 
+; Divide a by b
+; Result (quotient) is stored into d
+Divide::
+    ld d, 0
+.loop
+    cp b
+    jr c, .done
+    sub a, b
+    inc d
+    jr .loop
+.done
+    ret
+
+; Multiply hl by arg1 (8 bits)
+; Invalidate af, d
+MACRO Multiply 
+IF \1 == 0
+    ld hl, 0
+ELIF \1 == 1
+    ; nothing to do
+ELSE
+    ld a, h
+    or 0 ; set the flags
+    jp nz, .do_multiply\@
+    ld a, l
+    or 0 ; set the flags
+    jp z, .end_multiply\@ ; HL is zero, nothing to do
+
+
+.do_multiply\@
+    ld d, \1
+    dec d
+
+    ; ld bc, hl
+    ld b, h
+    ld c, l
+    .loop\@
+        add hl, bc
+        dec d
+        jr nz, .loop\@
+
+.end_multiply\@
+ENDC
+ENDM
 
 WaitVBlank:
     ld hl, wVBlankInterrupt  ; hl = pointer to wVBlankInterrupt

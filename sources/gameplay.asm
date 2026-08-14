@@ -27,6 +27,8 @@ DEF PLAYER_FACE_UP EQU 3
 DEF PLAYER_OAM_INDEX EQU 0
 DEF PLAYER_START_TILE_ID EQU low( map_village_tileset_size / TILE_SIZE ) 
 
+DEF TILE_MAP_METADATA_COLLISION EQU 1
+
 ; Interupts 
 SECTION "Vblank", 			ROM0[INT_HANDLER_VBLANK]
     push af
@@ -111,8 +113,15 @@ UpdateInput::
 
     ; TODO There is a lot of things optimizable here
 UpdatePlayerPositionAndDirection::
-    ; b: x speed, c: y speed
-    ld bc, 0
+
+    PUSHS "stack variable", WRAM0
+        wSpeedX: db
+        wSpeedY: db
+    POPS
+    
+    xor a
+    ld [wSpeedX], a
+    ld [wSpeedY], a
 
 .check_right
     ld a, [wJoypadCurrent]
@@ -122,7 +131,8 @@ UpdatePlayerPositionAndDirection::
     ld a, PLAYER_FACE_RIGHT
     ld [wPlayerDirection], a
 
-    ld b, PLAYER_SPEED
+    ld a, PLAYER_SPEED
+    ld [wSpeedX], a
 
     jr .end_check_input
 .check_left
@@ -134,7 +144,8 @@ UpdatePlayerPositionAndDirection::
     ld a, PLAYER_FACE_LEFT
     ld [wPlayerDirection], a
 
-    ld b, -PLAYER_SPEED
+    ld a, -PLAYER_SPEED
+    ld [wSpeedX], a
 
     jr .end_check_input
 .check_up
@@ -146,7 +157,8 @@ UpdatePlayerPositionAndDirection::
     ld a, PLAYER_FACE_UP
     ld [wPlayerDirection], a
 
-    ld c, -PLAYER_SPEED
+    ld a, -PLAYER_SPEED
+    ld [wSpeedY], a
 
     jr .end_check_input
 .check_down
@@ -158,15 +170,42 @@ UpdatePlayerPositionAndDirection::
     ld a, PLAYER_FACE_DOWN
     ld [wPlayerDirection], a
 
-    ld c, PLAYER_SPEED
+    ld a, PLAYER_SPEED
+    ld [wSpeedY], a
 
     jr .end_check_input
 
 .end_check_input
 
-    ; Update 16 bits X
+.check_collisions
+
+    ld a, [wSpeedX]
+    ld b, a
+
     ld a, [wPlayerPositionX]
-    add b
+    add b ; Add the X movement stored in b
+    
+    ld d, a ; Setup Gameplay_GetTileMetadata params
+
+    ld a, [wSpeedY]
+    ld b, a
+
+    ld a, [wPlayerPositionY]
+    add b 
+
+    ld e, a ; Setup Gameplay_GetTileMetadata params
+    call Gameplay_GetTileMetadata
+    cp TILE_MAP_METADATA_COLLISION
+    
+    jr z, .no_update_pos_because_colision
+
+.update_ram_positions
+    ; Update 16 bits X
+    ld a, [wSpeedX]
+    ld b, a
+
+    ld a, [wPlayerPositionX]
+    add b ; Add the X movement stored in b
     ld [wPlayerPositionX], a
 
     ld a, [wPlayerPositionX+1]
@@ -174,17 +213,23 @@ UpdatePlayerPositionAndDirection::
     ld [wPlayerPositionX+1], a
 
     ; Update 16 bits Y
+    ld a, [wSpeedY]
+    ld b, a
+
     ld a, [wPlayerPositionY]
-    add c
+    add b ; Add the X movement stored in b
     ld [wPlayerPositionY], a
 
     ld a, [wPlayerPositionY+1]
     adc 0
     ld [wPlayerPositionY+1], a
 
+.no_update_pos_because_colision
+
+.update_background_scroll
     ; 1) if Player position is between 0 and SCREEN_WIDTH_PX/2;SCREEN_HEIGHT_PX/2
     ;   ScreenPos should be lock to 0;0
-    ; 2) if Player position is between TILEMAP_WIDTH_PX - SCREEN_WIDTH_PX;TILEMAP_HEIGHT_PX - SCREEN_HEIGHT_PX and 256;256
+    ; 2) if Player position is between TILEMAP_WIDTH_PX - SCREEN_WIDTH_PX/2;TILEMAP_HEIGHT_PX - SCREEN_HEIGHT_PX/2 and 256;256
     ;   Screen position should be locked to  TILEMAP_WIDTH_PX - SCREEN_WIDTH_PX;TILEMAP_HEIGHT_PX - SCREEN_HEIGHT_PX
     ; 3) Otherwize, position should be 
     ;   PlayerX-(SCREEN_WIDTH_PX/2);PlayerY-(SCREEN_HEIGHT_PX/2)
@@ -231,9 +276,43 @@ UpdatePlayerPositionAndDirection::
     sub a, SCREEN_HEIGHT_PX/2
     ld [wShadowScreenPositionY], a
    
-
 .end_camera_check
 
+    ret
+
+; Load the tile metadata from 8 bits position stored in DE (XY)
+; Return in a
+Gameplay_GetTileMetadata::
+    push de
+    
+    ld a, e
+    ; Divide by the size of a tile to get the y tile index
+    ld b, TILE_HEIGHT
+    call Divide
+    ; D is tile index on the y side
+
+    ; Multiply by the map width to get the proper collision index
+    ld l, d
+    ld h, 0
+    Multiply TILEMAP_WIDTH
+    
+    ; Add the start offset of the collision map
+    ld bc, map_village_collisions
+    add hl, bc
+
+    pop de ; get back args
+
+    ld a, d
+    ; Get the X tile index 
+    ld b, TILE_WIDTH
+    call Divide
+    
+    ; D is tile index on the x side
+    ld b, 0
+    ld c, d
+    add hl, bc
+
+    ld a, [hl] ; return value
     ret
 
 Gameplay_Update::
