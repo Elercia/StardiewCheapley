@@ -398,8 +398,6 @@ Gameplay_GetTileMetadata::
     add hl, de
 
     ld a, [hl] ; return value
-
-    ld [wTileMetaData], a
     ret
 
 Gameplay_Update::
