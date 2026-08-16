@@ -114,15 +114,6 @@ UpdateInput::
     ; TODO There is a lot of things optimizable here
 UpdatePlayerPositionAndDirection::
 
-    PUSHS "stack variable", WRAM0
-        wSpeedX: db
-        wSpeedY: db
-    POPS
-    
-    xor a
-    ld [wSpeedX], a
-    ld [wSpeedY], a
-
 .check_right
     ld a, [wJoypadCurrent]
     and JOYP_RIGHT ; Select right
@@ -131,10 +122,38 @@ UpdatePlayerPositionAndDirection::
     ld a, PLAYER_FACE_RIGHT
     ld [wPlayerDirection], a
 
-    ld a, PLAYER_SPEED
-    ld [wSpeedX], a
+    ; Check collisions
+    ; 1) Upper right corner
+    ; 2) Lower right corner
 
-    jr .end_check_input
+    ; 1)
+    ld a, [wPlayerPositionX]
+    add PLAYER_SPEED ; Add the speed so we check the next position
+    add TILE_WIDTH-1
+    ld d, a ; Setup Gameplay_GetTileMetadata params
+    ld a, [wPlayerPositionY]
+    ld e, a ; Setup Gameplay_GetTileMetadata params
+    call Gameplay_GetTileMetadata
+    cp TILE_MAP_METADATA_COLLISION
+    jp z, .no_update_pos_because_colision
+
+    ; 2)
+    ld a, [wPlayerPositionX]
+    add PLAYER_SPEED ; Add the speed so we check the next position
+    add TILE_WIDTH-1
+    ld d, a ; Setup Gameplay_GetTileMetadata params
+    ld a, [wPlayerPositionY]
+    add TILE_HEIGHT-1
+    ld e, a ; Setup Gameplay_GetTileMetadata params
+    call Gameplay_GetTileMetadata
+    cp TILE_MAP_METADATA_COLLISION
+    jp z, .no_update_pos_because_colision
+
+    ld a, [wPlayerPositionX]
+    add PLAYER_SPEED
+    ld [wPlayerPositionX], a
+
+    jp .end_check_input
 .check_left
     ld a, [wJoypadCurrent]
     and JOYP_LEFT ; Select left
@@ -144,8 +163,34 @@ UpdatePlayerPositionAndDirection::
     ld a, PLAYER_FACE_LEFT
     ld [wPlayerDirection], a
 
-    ld a, -PLAYER_SPEED
-    ld [wSpeedX], a
+    ; Check collisions
+    ; 1) Upper left corner
+    ; 2) Lower left corner
+
+    ; 1)
+    ld a, [wPlayerPositionX]
+    sub PLAYER_SPEED
+    ld d, a ; Setup Gameplay_GetTileMetadata params
+    ld a, [wPlayerPositionY]
+    ld e, a ; Setup Gameplay_GetTileMetadata params
+    call Gameplay_GetTileMetadata
+    cp TILE_MAP_METADATA_COLLISION
+    jp z, .no_update_pos_because_colision
+
+    ; 2)
+    ld a, [wPlayerPositionX]
+    sub PLAYER_SPEED
+    ld d, a ; Setup Gameplay_GetTileMetadata params
+    ld a, [wPlayerPositionY]
+    add TILE_HEIGHT-1
+    ld e, a ; Setup Gameplay_GetTileMetadata params
+    call Gameplay_GetTileMetadata
+    cp TILE_MAP_METADATA_COLLISION
+    jp z, .no_update_pos_because_colision
+
+    ld a, [wPlayerPositionX]
+    sub PLAYER_SPEED
+    ld [wPlayerPositionX], a
 
     jr .end_check_input
 .check_up
@@ -157,8 +202,34 @@ UpdatePlayerPositionAndDirection::
     ld a, PLAYER_FACE_UP
     ld [wPlayerDirection], a
 
-    ld a, -PLAYER_SPEED
-    ld [wSpeedY], a
+    ; Check collisions
+    ; 1) Upper left corner
+    ; 2) Upper right corner
+
+    ; 1)
+    ld a, [wPlayerPositionX]
+    ld d, a ; Setup Gameplay_GetTileMetadata params
+    ld a, [wPlayerPositionY]
+    sub PLAYER_SPEED
+    ld e, a ; Setup Gameplay_GetTileMetadata params
+    call Gameplay_GetTileMetadata
+    cp TILE_MAP_METADATA_COLLISION
+    jr z, .no_update_pos_because_colision
+
+    ; 2)
+    ld a, [wPlayerPositionX]
+    add TILE_WIDTH-1
+    ld d, a ; Setup Gameplay_GetTileMetadata params
+    ld a, [wPlayerPositionY]
+    sub PLAYER_SPEED
+    ld e, a ; Setup Gameplay_GetTileMetadata params
+    call Gameplay_GetTileMetadata
+    cp TILE_MAP_METADATA_COLLISION
+    jr z, .no_update_pos_because_colision
+
+    ld a, [wPlayerPositionY]
+    sub PLAYER_SPEED
+    ld [wPlayerPositionY], a
 
     jr .end_check_input
 .check_down
@@ -170,59 +241,65 @@ UpdatePlayerPositionAndDirection::
     ld a, PLAYER_FACE_DOWN
     ld [wPlayerDirection], a
 
-    ld a, PLAYER_SPEED
-    ld [wSpeedY], a
+    ; Check collisions
+    ; 1) Lower left corner
+    ; 2) Lower right corner
 
-    jr .end_check_input
-
-.end_check_input
-
-.check_collisions
-
-    ld a, [wSpeedX]
-    ld b, a
-
+    ; 1)
     ld a, [wPlayerPositionX]
-    add b ; Add the X movement stored in b
-    
     ld d, a ; Setup Gameplay_GetTileMetadata params
-
-    ld a, [wSpeedY]
-    ld b, a
-
     ld a, [wPlayerPositionY]
-    add b 
-
+    add PLAYER_SPEED
+    add TILE_HEIGHT-1
     ld e, a ; Setup Gameplay_GetTileMetadata params
     call Gameplay_GetTileMetadata
     cp TILE_MAP_METADATA_COLLISION
-    
     jr z, .no_update_pos_because_colision
 
-.update_ram_positions
-    ; Update 16 bits X
-    ld a, [wSpeedX]
-    ld b, a
-
+    ; 2) 
     ld a, [wPlayerPositionX]
-    add b ; Add the X movement stored in b
-    ld [wPlayerPositionX], a
-
-    ld a, [wPlayerPositionX+1]
-    adc 0
-    ld [wPlayerPositionX+1], a
-
-    ; Update 16 bits Y
-    ld a, [wSpeedY]
-    ld b, a
+    add TILE_WIDTH-1
+    ld d, a ; Setup Gameplay_GetTileMetadata params
+    ld a, [wPlayerPositionY]
+    add PLAYER_SPEED
+    add TILE_HEIGHT-1
+    ld e, a ; Setup Gameplay_GetTileMetadata params
+    call Gameplay_GetTileMetadata
+    cp TILE_MAP_METADATA_COLLISION
+    jr z, .no_update_pos_because_colision
 
     ld a, [wPlayerPositionY]
-    add b ; Add the X movement stored in b
+    add PLAYER_SPEED
     ld [wPlayerPositionY], a
 
-    ld a, [wPlayerPositionY+1]
-    adc 0
-    ld [wPlayerPositionY+1], a
+.end_check_input
+
+    ; Commented because it handle 16 bits position and I want to keep the code but everywhere else positions are
+    ;   handled as 8 bits
+; .update_ram_positions 
+;     ; Update 16 bits X
+;     ld a, [wSpeedX]
+;     ld b, a
+
+;     ld a, [wPlayerPositionX]
+;     add b ; Add the X movement stored in b
+;     ld [wPlayerPositionX], a
+
+;     ld a, [wPlayerPositionX+1]
+;     adc 0
+;     ld [wPlayerPositionX+1], a
+
+;     ; Update 16 bits Y
+;     ld a, [wSpeedY]
+;     ld b, a
+
+;     ld a, [wPlayerPositionY]
+;     add b ; Add the X movement stored in b
+;     ld [wPlayerPositionY], a
+
+;     ld a, [wPlayerPositionY+1]
+;     adc 0
+;     ld [wPlayerPositionY+1], a
 
 .no_update_pos_because_colision
 
@@ -285,34 +362,44 @@ UpdatePlayerPositionAndDirection::
 Gameplay_GetTileMetadata::
     push de
     
-    ld a, e
-    ; Divide by the size of a tile to get the y tile index
-    ld b, TILE_HEIGHT
-    call Divide
-    ; D is tile index on the y side
+    ; Get the cell by doing : cell = ( pos_x / TILE_WIDTH ) + ( ( pos_y / TILE_HEIGHT ) * MAP_WIDTH )
+
+    ; Begin by the y position
+    ; Divide position by TILE_WIDTH (shift 3 times)
+    srl e
+    srl e
+    srl e
 
     ; Multiply by the map width to get the proper collision index
-    ld l, d
+    ld l, 0
     ld h, 0
-    Multiply TILEMAP_WIDTH
-    
-    ; Add the start offset of the collision map
-    ld bc, map_village_collisions
-    add hl, bc
+
+    ; Dumb multiplication
+    ld d, 0
+    ; ld e, e
+    REPT TILEMAP_WIDTH
+        add hl, de
+    ENDR
 
     pop de ; get back args
 
-    ld a, d
-    ; Get the X tile index 
-    ld b, TILE_WIDTH
-    call Divide
+    ; Divide position by TILE_WIDTH (shift 3 times)
+    srl d
+    srl d
+    srl d
     
     ; D is tile index on the x side
-    ld b, 0
-    ld c, d
-    add hl, bc
+    ld e, d
+    ld d, 0
+    add hl, de
+
+    ; Finaly, add the start offset of the collision map
+    ld de, map_village_collisions
+    add hl, de
 
     ld a, [hl] ; return value
+
+    ld [wTileMetaData], a
     ret
 
 Gameplay_Update::
@@ -324,12 +411,14 @@ Gameplay_Update::
     ld b, a
     ld a, [wPlayerPositionY]
     sub b
+    add 16 ; This is the OAM zone where tile are invisible (offset)
     ld [wShadowOAM+(PLAYER_OAM_INDEX * OBJ_SIZE)+OAMA_Y], a
 
     ld a, [wShadowScreenPositionX]
     ld b, a
     ld a, [wPlayerPositionX]
     sub b
+    add 8 ; This is the OAM zone where tile are invisible (offset)
     ld [wShadowOAM+(PLAYER_OAM_INDEX * OBJ_SIZE)+OAMA_X], a
 
     ld a, [wPlayerDirection]
@@ -337,7 +426,7 @@ Gameplay_Update::
     add a, b
     ld [wShadowOAM+(PLAYER_OAM_INDEX * OBJ_SIZE)+OAMA_TILEID], a
     
-    ld a, 0b00000001
+    ld a, 0b00000000
     ld [wShadowOAM+(PLAYER_OAM_INDEX * OBJ_SIZE)+OAMA_FLAGS], a
 
     ret
