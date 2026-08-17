@@ -9,11 +9,13 @@ class Tilset:
     input_image : str
     name : str
     include_in_rom : bool
+    object_sprite : bool
 
-    def __init__(self, p_input_file_name: str, p_name: str, p_include_in_rom : bool = True):
+    def __init__(self, p_input_file_name: str, p_name: str, p_object_sprite : bool = False, p_include_in_rom : bool = True):
         self.input_image = p_input_file_name
         self.name = p_name
         self.include_in_rom = p_include_in_rom
+        self.object_sprite = p_object_sprite
 
 class Level:
     level_name : str
@@ -25,7 +27,8 @@ class Level:
 
 standalone_tilesets : list[Tilset] = [
     Tilset("../Data/font_tileset.png", "font_tileset"),
-    Tilset("../Data/character_tileset.png", "character_tileset"),
+    #Tilset("../Data/directionnal_test_character_tileset.png", "character_tileset"),
+    Tilset("../Data/character_tileset.png", "character_tileset", p_object_sprite=True),
     Tilset("../Data/village_tileset.png", "village_tileset", p_include_in_rom = False)
 ]
 levels : list[Level] = [
@@ -59,22 +62,60 @@ if __name__ == "__main__":
     "SECTION \"GFX\", ROM0\n\n")
     
     for tileset in standalone_tilesets:
-        subprocess.run([rgbgfx_executable,
+        rgbgfx_args = [rgbgfx_executable,
                         "--auto-palette", 
                         "--group-outputs",
-                        "--unique-tiles",
                         #"--base-tile", "{}".format(max_level_tileset), 
                         "-o", "../sources/gfx/{}.2bpp".format(tileset.name), 
-                        tileset.input_image])
+                        tileset.input_image]
 
-        if tileset.include_in_rom:
+        # In case of objects, we need to output tilemap an dattribute map as well as remove unique / mirrored tiles
+        # NOTE: In the current release of RGBGFX, we do not have an option to store output tiles as 8x16
+        #   The "--columns" args only READS the input as columns but with unique / mirrors, output can invalid for 8x16
+        if tileset.object_sprite:
+            #args.append("--columns") # This option is useless
+            rgbgfx_args.append("--auto-attr-map")
+            rgbgfx_args.extend(["--tilemap", "../sources/gfx/{}.tilemap".format(tileset.name)])
+            rgbgfx_args.extend(["--unique-tiles", "--mirror-x", "--mirror-y"])
+
+        subprocess.run(rgbgfx_args)
+
+        if tileset.object_sprite:
+            # In case of a object, we need to read the output tilemap and build a map
+            pass
+
+
+        if tileset.object_sprite:
             gfx_file_content += (
-                "{tilesetname}:\n"
-                "    INCBIN \"gfx/{tilesetname}.2bpp\"\n"
+                "SECTION \"{tilesetname}\", ROM0, ALIGN[4]\n"
+                ).format(tilesetname = tileset.name)
+        else:
+            gfx_file_content += (
+                "SECTION \"{tilesetname}\", ROM0, ALIGN[2]\n"
+                ).format(tilesetname = tileset.name)
+            
+        gfx_file_content += (
+            "{tilesetname}:\n"
+            "    INCBIN \"gfx/{tilesetname}.2bpp\"\n"
+            "   .end\n"
+            "DEF {tilesetname}_size EQU {tilesetname}.end - {tilesetname}\n"
+            "\n").format(tilesetname = tileset.name)
+
+        if tileset.object_sprite:
+            gfx_file_content += (
+                "{tilesetname}_attribute_map:\n"
+                "    INCBIN \"gfx/{tilesetname}.attrmap\"\n"
                 "   .end\n"
-                "DEF {tilesetname}_size EQU {tilesetname}.end - {tilesetname}\n"
+                #"DEF {tilesetname}_attribute_map_size EQU {tilesetname}_attribute_map.end - {tilesetname}_attribute_map\n"
                 "\n").format(tilesetname = tileset.name)
-        
+            gfx_file_content += (
+                "{tilesetname}_tilemap:\n"
+                "    INCBIN \"gfx/{tilesetname}.tilemap\"\n"
+                "   .end\n"
+                #"DEF {tilesetname}_attribute_map_size EQU {tilesetname}_attribute_map.end - {tilesetname}_attribute_map\n"
+                "\n").format(tilesetname = tileset.name)
+            
+
     for level in levels:
         output_name = "map_" + level.level_name.lower()
         input_image_name = base_ldtk_export_path + level.level_name + "/Background.png"
@@ -97,11 +138,16 @@ if __name__ == "__main__":
                         "--group-outputs",
                         "--auto-attr-map",
                         "--unique-tiles",
-                        "--input-tileset", "../sources/gfx/{}.2bpp".format(level.tileset_name),
+                        # Re-enable it when there is multiple levels with the same tileset
+                        #"--input-tileset", "../sources/gfx/{}.2bpp".format(level.tileset_name),
                         "--tilemap", "../sources/gfx/{}.tilemap".format(output_name),
                         "-o", "../sources/gfx/{}.2bpp".format(output_name), 
                         input_image_name])
 
+        gfx_file_content += (
+                "SECTION \"{tilesetname}\", ROM0, ALIGN[2]\n"
+                ).format(tilesetname = output_name)
+        
         gfx_file_content += (
             "{tilesetname}_tilemap:\n"
             "    INCBIN \"gfx/{tilesetname}.tilemap\"\n"

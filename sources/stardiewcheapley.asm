@@ -117,12 +117,18 @@ EntryPoint:
 	di
 
 	; Set the LCD control register
-	ld a, ( LCDC_OFF | LCDC_WIN_9800 | LCDC_WIN_OFF | LCDC_BLOCK01 | LCDC_BG_9800 | LCDC_OBJ_8 | LCDC_OBJ_ON | LCDC_BG_ON )
+	ld a, ( LCDC_OFF | LCDC_WIN_9C00 | LCDC_WIN_OFF | LCDC_BLOCK01 | LCDC_BG_9800 | LCDC_OBJ_8 | LCDC_OBJ_ON | LCDC_BG_ON )
 	ld [rLCDC], a
 
-	; Set the palette
+	; Set the palettes
 	ld a, %11100100
 	ld [rBGP], a
+
+	ld a, %11100100
+	ld [rOBP0], a
+	
+	ld a, %11100100
+	ld [rOBP1], a
 
 	call Gameplay_Init
 

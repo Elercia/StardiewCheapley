@@ -4,16 +4,33 @@
 
 SECTION "GFX", ROM0
 
+SECTION "font_tileset", ROM0, ALIGN[2]
 font_tileset:
     INCBIN "gfx/font_tileset.2bpp"
    .end
 DEF font_tileset_size EQU font_tileset.end - font_tileset
 
+SECTION "character_tileset", ROM0, ALIGN[4]
 character_tileset:
     INCBIN "gfx/character_tileset.2bpp"
    .end
 DEF character_tileset_size EQU character_tileset.end - character_tileset
 
+character_tileset_attribute_map:
+    INCBIN "gfx/character_tileset.attrmap"
+   .end
+
+character_tileset_tilemap:
+    INCBIN "gfx/character_tileset.tilemap"
+   .end
+
+SECTION "village_tileset", ROM0, ALIGN[2]
+village_tileset:
+    INCBIN "gfx/village_tileset.2bpp"
+   .end
+DEF village_tileset_size EQU village_tileset.end - village_tileset
+
+SECTION "map_village", ROM0, ALIGN[2]
 map_village_tilemap:
     INCBIN "gfx/map_village.tilemap"
     .end
