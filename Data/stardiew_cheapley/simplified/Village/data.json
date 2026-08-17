@@ -18,9 +18,9 @@
 				"iid": "f109d4c0-6fc0-11f1-8b19-cde321d4232b",
 				"layer": "Entities",
 				"x": 44,
-				"y": 116,
-				"width": 8,
-				"height": 8,
+				"y": 36,
+				"width": 16,
+				"height": 16,
 				"color": 12470831,
 				"customFields": {
 					"Tile": {
