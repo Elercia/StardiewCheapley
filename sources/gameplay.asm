@@ -416,138 +416,17 @@ Gameplay_GetTileMetadata::
 UpdatePlayerOAM::
     ; Update player OAM Data
 
-    ; Upper Left
+    ; OAM positions
     ld a, [wShadowScreenPositionY]
     ld b, a
     ld a, [wPlayerPositionY]
     sub b
     add 16 ; This is the OAM zone where tile are invisible (offset)
     ld [wShadowOAM+(PLAYER_OAM_INDEX_UPPER_LEFT * OBJ_SIZE)+OAMA_Y], a
-
-    ld a, [wShadowScreenPositionX]
-    ld b, a
-    ld a, [wPlayerPositionX]
-    sub b
-    add 8 ; This is the OAM zone where tile are invisible (offset)
-    ld [wShadowOAM+(PLAYER_OAM_INDEX_UPPER_LEFT * OBJ_SIZE)+OAMA_X], a
-
-    ld hl, PlayerDirectionToTileIndex
-    ld a, [wPlayerDirection]
-    ld d, 0
-    ld e, a
-    REPT 4
-    add hl, de
-    ENDR
-    ld a, [hl]
-    ld d, a
-
-    ld hl, character_tileset_tilemap
-    ld b, 0
-    ld c, d
-    add hl, bc
-    ld a, [hl]
-    add PLAYER_START_TILE_ID
-    ld [wShadowOAM+(PLAYER_OAM_INDEX_UPPER_LEFT * OBJ_SIZE)+OAMA_TILEID], a
-
-    ld hl, character_tileset_attribute_map
-    ld b, 0
-    ld c, d
-    add hl, bc
-    ld a, [hl]
-    ld [wShadowOAM+(PLAYER_OAM_INDEX_UPPER_LEFT * OBJ_SIZE)+OAMA_FLAGS], a
-
-    ; Upper Right
-    ld a, [wShadowScreenPositionY]
-    ld b, a
-    ld a, [wPlayerPositionY]
-    sub b
-    add 16 ; This is the OAM zone where tile are invisible (offset)
     ld [wShadowOAM+(PLAYER_OAM_INDEX_UPPER_RIGHT * OBJ_SIZE)+OAMA_Y], a
 
-    ld a, [wShadowScreenPositionX]
-    ld b, a
-    ld a, [wPlayerPositionX]
-    sub b
-    add 8 ; This is the OAM zone where tile are invisible (offset)
-    add TILE_WIDTH
-    ld [wShadowOAM+(PLAYER_OAM_INDEX_UPPER_RIGHT * OBJ_SIZE)+OAMA_X], a
-
-    ld hl, PlayerDirectionToTileIndex
-    ld a, [wPlayerDirection]
-    ld d, 0
-    ld e, a
-    REPT 4
-    add hl, de
-    ENDR
-    inc hl
-    ld a, [hl]
-    ld d, a
-
-    ld hl, character_tileset_tilemap
-    ld b, 0
-    ld c, d
-    add hl, bc
-    ld a, [hl]
-    add PLAYER_START_TILE_ID
-    ld [wShadowOAM+(PLAYER_OAM_INDEX_UPPER_RIGHT * OBJ_SIZE)+OAMA_TILEID], a
-
-    ld hl, character_tileset_attribute_map
-    ld b, 0
-    ld c, d
-    add hl, bc
-    ld a, [hl]
-    ld [wShadowOAM+(PLAYER_OAM_INDEX_UPPER_RIGHT * OBJ_SIZE)+OAMA_FLAGS], a
-
-    ; Down Left
-    ld a, [wShadowScreenPositionY]
-    ld b, a
-    ld a, [wPlayerPositionY]
-    sub b
-    add 16 ; This is the OAM zone where tile are invisible (offset)
     add TILE_HEIGHT
     ld [wShadowOAM+(PLAYER_OAM_INDEX_LOWER_LEFT * OBJ_SIZE)+OAMA_Y], a
-
-    ld a, [wShadowScreenPositionX]
-    ld b, a
-    ld a, [wPlayerPositionX]
-    sub b
-    add 8 ; This is the OAM zone where tile are invisible (offset)
-    ld [wShadowOAM+(PLAYER_OAM_INDEX_LOWER_LEFT * OBJ_SIZE)+OAMA_X], a
-
-    ld hl, PlayerDirectionToTileIndex
-    ld a, [wPlayerDirection]
-    ld d, 0
-    ld e, a
-    REPT 4
-    add hl, de
-    ENDR
-    inc hl
-    inc hl
-    ld a, [hl]
-    ld d, a
-
-    ld hl, character_tileset_tilemap
-    ld b, 0
-    ld c, d
-    add hl, bc
-    ld a, [hl]
-    add PLAYER_START_TILE_ID
-    ld [wShadowOAM+(PLAYER_OAM_INDEX_LOWER_LEFT * OBJ_SIZE)+OAMA_TILEID], a
-
-    ld hl, character_tileset_attribute_map
-    ld b, 0
-    ld c, d
-    add hl, bc
-    ld a, [hl]
-    ld [wShadowOAM+(PLAYER_OAM_INDEX_LOWER_LEFT * OBJ_SIZE)+OAMA_FLAGS], a
-
-    ; Down Right
-    ld a, [wShadowScreenPositionY]
-    ld b, a
-    ld a, [wPlayerPositionY]
-    sub b
-    add 16 ; This is the OAM zone where tile are invisible (offset)
-    add TILE_HEIGHT
     ld [wShadowOAM+(PLAYER_OAM_INDEX_LOWER_RIGHT * OBJ_SIZE)+OAMA_Y], a
 
     ld a, [wShadowScreenPositionX]
@@ -555,9 +434,14 @@ UpdatePlayerOAM::
     ld a, [wPlayerPositionX]
     sub b
     add 8 ; This is the OAM zone where tile are invisible (offset)
+    ld [wShadowOAM+(PLAYER_OAM_INDEX_UPPER_LEFT * OBJ_SIZE)+OAMA_X], a
+    ld [wShadowOAM+(PLAYER_OAM_INDEX_LOWER_LEFT * OBJ_SIZE)+OAMA_X], a
+
     add TILE_WIDTH
+    ld [wShadowOAM+(PLAYER_OAM_INDEX_UPPER_RIGHT * OBJ_SIZE)+OAMA_X], a
     ld [wShadowOAM+(PLAYER_OAM_INDEX_LOWER_RIGHT * OBJ_SIZE)+OAMA_X], a
 
+    ; OAM Tiles index
     ld hl, PlayerDirectionToTileIndex
     ld a, [wPlayerDirection]
     ld d, 0
@@ -565,27 +449,109 @@ UpdatePlayerOAM::
     REPT 4
     add hl, de
     ENDR
-    inc hl
-    inc hl
+
+    ld d, h ; DE is the base addr of the current animation (+1 2 3 to get the right tile)
+    ld e, l
+
+    ld a, [de]
+    ld hl, character_tileset_tilemap
+    ld b, 0
+    ld c, a
+    add hl, bc
+    ld a, [hl]
+    add PLAYER_START_TILE_ID
+    ld [wShadowOAM+(PLAYER_OAM_INDEX_UPPER_LEFT * OBJ_SIZE)+OAMA_TILEID], a
+
+    ld h, d
+    ld l, e
+
     inc hl
     ld a, [hl]
-    ld d, a
 
     ld hl, character_tileset_tilemap
     ld b, 0
-    ld c, d
+    ld c, a
+    add hl, bc
+    ld a, [hl]
+    add PLAYER_START_TILE_ID
+    ld [wShadowOAM+(PLAYER_OAM_INDEX_UPPER_RIGHT * OBJ_SIZE)+OAMA_TILEID], a
+
+    ld h, d
+    ld l, e
+    REPT 2
+    inc hl
+    ENDR
+    ld a, [hl]
+
+    ld hl, character_tileset_tilemap
+    ld b, 0
+    ld c, a
+    add hl, bc
+    ld a, [hl]
+    add PLAYER_START_TILE_ID
+    ld [wShadowOAM+(PLAYER_OAM_INDEX_LOWER_LEFT * OBJ_SIZE)+OAMA_TILEID], a
+
+    ld h, d
+    ld l, e
+    REPT 3
+    inc hl
+    ENDR
+    ld a, [hl]
+
+    ld hl, character_tileset_tilemap
+    ld b, 0
+    ld c, a
     add hl, bc
     ld a, [hl]
     add PLAYER_START_TILE_ID
     ld [wShadowOAM+(PLAYER_OAM_INDEX_LOWER_RIGHT * OBJ_SIZE)+OAMA_TILEID], a
 
+    ld h, d
+    ld l, e
+    ld a, [hl]
     ld hl, character_tileset_attribute_map
     ld b, 0
-    ld c, d
+    ld c, a
+    add hl, bc
+    ld a, [hl]
+    ld [wShadowOAM+(PLAYER_OAM_INDEX_UPPER_LEFT * OBJ_SIZE)+OAMA_FLAGS], a
+    ld h, d
+    ld l, e
+    REPT 1
+    inc hl
+    ENDR
+    ld a, [hl]
+    ld hl, character_tileset_attribute_map
+    ld b, 0
+    ld c, a
+    add hl, bc
+    ld a, [hl]
+    ld [wShadowOAM+(PLAYER_OAM_INDEX_UPPER_RIGHT * OBJ_SIZE)+OAMA_FLAGS], a
+    ld h, d
+    ld l, e
+    REPT 2
+    inc hl
+    ENDR
+    ld a, [hl]
+    ld hl, character_tileset_attribute_map
+    ld b, 0
+    ld c, a
+    add hl, bc
+    ld a, [hl]
+    ld [wShadowOAM+(PLAYER_OAM_INDEX_LOWER_LEFT * OBJ_SIZE)+OAMA_FLAGS], a
+    ld h, d
+    ld l, e
+    REPT 3
+    inc hl
+    ENDR
+    ld a, [hl]
+    ld hl, character_tileset_attribute_map
+    ld b, 0
+    ld c, a
     add hl, bc
     ld a, [hl]
     ld [wShadowOAM+(PLAYER_OAM_INDEX_LOWER_RIGHT * OBJ_SIZE)+OAMA_FLAGS], a
-    
+
     ret
 
 Gameplay_Update::
