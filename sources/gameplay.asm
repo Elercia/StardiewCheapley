@@ -413,10 +413,7 @@ Gameplay_GetTileMetadata::
     ld a, [hl] ; return value
     ret
 
-Gameplay_Update::
-    call UpdateInput
-    call UpdatePlayerPositionAndDirection
-
+UpdatePlayerOAM::
     ; Update player OAM Data
 
     ; Upper Left
@@ -588,5 +585,12 @@ Gameplay_Update::
     add hl, bc
     ld a, [hl]
     ld [wShadowOAM+(PLAYER_OAM_INDEX_LOWER_RIGHT * OBJ_SIZE)+OAMA_FLAGS], a
+    
+    ret
+
+Gameplay_Update::
+    call UpdateInput
+    call UpdatePlayerPositionAndDirection
+    call UpdatePlayerOAM
 
     ret
