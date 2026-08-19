@@ -5,19 +5,27 @@ wJoypadPrevious:: db
 SECTION "Interrupts Variables", WRAM0
 wVBlankInterrupt:: db
 
-SECTION "Player Variables", WRAM0
-; 2 bytes for pixel position in world. 
-; Have it as u16  is not useful right now but will be necessary when we will be using streaming
-;   And its challenging
-wPlayerPositionX:: dw 
-wPlayerPositionY:: dw
-wPlayerDirection:: db ; 1 byte for direction (only uses 2 bits)
-
+SECTION "Screen Variables", WRAM0
 ; Shadowing of rSCX & rSCY to update only in vblanks (to avoid tearing)
 wShadowScreenPositionX:: db
 wShadowScreenPositionY:: db
 
+SECTION "Player Variables", WRAM0
+; 2 bytes for pixel position in world. 
+; Have it as u16  is not useful right now but will be necessary when we will be using streaming
+;   And its challenging
+;   But too challging atm, so we don't use it 
+wPlayerPositionX:: dw 
+wPlayerPositionY:: dw
+wPlayerDirection:: db ; 1 byte for direction (only uses 2 bits)
+
+wCurrentAnimationAddr:: dw ; Address of the current animation
+wCurrentAnimationDelayBeforeNextFrame::db
+wCurrentAnimationFrameIndex::db
+wCurrentAnimationFrameCount::db ; Used to modulo the animation
+
 DEF PLAYER_SPEED EQU 1
+DEF PLAYER_ANIMATION_SPEED EQU 10 ; N frames per animation frame
 
 DEF PLAYER_SPRITE_WIDTH EQU 16
 DEF PLAYER_SPRITE_HEIGHT EQU 16
@@ -55,12 +63,6 @@ SECTION "Joypad", 			ROM0[INT_HANDLER_JOYPAD]
 
 SECTION "Player Code", ROM0
 
-PlayerDirectionToTileIndex:
-    db 6*2, 6*2+1, 16+6*2, 16+4*6+1; Left
-    db 4*2, 4*2+1, 16+4*2, 16+4*2+1; Right
-    db 0*2, 0*2+1, 16+0*2, 16+0*2+1; Down
-    db 2*2, 2*2+1, 16+2*2, 16+2*2+1; Down
-
 Gameplay_Init::
     call Gameplay_InitMap
     call Gameplay_InitPlayer
@@ -97,6 +99,13 @@ Gameplay_InitPlayer::
     ld a, PLAYER_FACE_DOWN
     ld [wPlayerDirection], a
 
+    LOAD_16_BITS wCurrentAnimationAddr, walking_down
+    ld a, walking_down_frame_count
+    ld [wCurrentAnimationFrameCount], a
+    ld a, 0
+    ld [wCurrentAnimationFrameIndex], a
+    ld [wCurrentAnimationDelayBeforeNextFrame], a
+
     ret
 
 UpdateInput::
@@ -124,6 +133,55 @@ UpdateInput::
 
     ret
 
+; params : 
+;   HL is the animation label
+;   D the animation frame count
+Animation_StartOrAdvanceFrame::
+    ld b, l
+    ld a, [wCurrentAnimationAddr]
+    cp a, b
+    jr nz, .change_animation
+    ld b, h
+    ld a, [wCurrentAnimationAddr+1]
+    cp a, b
+    jr nz, .change_animation
+    
+.advance_animation ; animation is the same, advance animation index (modulo size)
+    ; Check the delay between frames
+    ld a, [wCurrentAnimationDelayBeforeNextFrame]
+    inc a
+    cp a, PLAYER_ANIMATION_SPEED
+    ld [wCurrentAnimationDelayBeforeNextFrame], a
+    ret nz
+
+    ; Change the frame index
+    ld a, [wCurrentAnimationFrameCount]
+    ld b, a
+    ld a, [wCurrentAnimationFrameIndex]
+    inc a
+    cp a, b
+    ld [wCurrentAnimationFrameIndex], a
+    ld a, 0
+    ld [wCurrentAnimationDelayBeforeNextFrame], a
+    ret nz ; early return, we did not reach animation frame end
+    
+    ld a, 0
+    ld [wCurrentAnimationFrameIndex], a ; go back to animation 0
+    ld [wCurrentAnimationDelayBeforeNextFrame], a
+    ret
+
+.change_animation
+    ld a, 0
+    ld [wCurrentAnimationFrameIndex], a ; go back to animation 0
+    ld [wCurrentAnimationDelayBeforeNextFrame], a 
+    ld a, d
+    ld [wCurrentAnimationFrameCount], a ; store the animation count
+    ld a, l
+    ld [wCurrentAnimationAddr], a
+    ld a, h
+    ld [wCurrentAnimationAddr+1], a
+    ret
+
     ; TODO There is a lot of things optimizable here
 UpdatePlayerPositionAndDirection::
 
@@ -131,9 +189,14 @@ UpdatePlayerPositionAndDirection::
     ld a, [wJoypadCurrent]
     and JOYP_RIGHT ; Select right
     jr nz, .check_left
+
     ; Player facing right
     ld a, PLAYER_FACE_RIGHT
     ld [wPlayerDirection], a
+
+    ld hl, walking_right
+    ld d, walking_right_frame_count
+    call Animation_StartOrAdvanceFrame 
 
     ; Check collisions
     ; 1) Upper right corner
@@ -176,6 +239,10 @@ UpdatePlayerPositionAndDirection::
     ld a, PLAYER_FACE_LEFT
     ld [wPlayerDirection], a
 
+    ld hl, walking_left
+    ld d, walking_left_frame_count
+    call Animation_StartOrAdvanceFrame 
+
     ; Check collisions
     ; 1) Upper left corner
     ; 2) Lower left corner
@@ -205,7 +272,7 @@ UpdatePlayerPositionAndDirection::
     sub PLAYER_SPEED
     ld [wPlayerPositionX], a
 
-    jr .end_check_input
+    jp .end_check_input
 .check_up
     ld a, [wJoypadCurrent]
     and JOYP_UP ; Select up
@@ -214,6 +281,10 @@ UpdatePlayerPositionAndDirection::
     ; Player facing up
     ld a, PLAYER_FACE_UP
     ld [wPlayerDirection], a
+
+    ld hl, walking_up
+    ld d, walking_up_frame_count
+    call Animation_StartOrAdvanceFrame 
 
     ; Check collisions
     ; 1) Upper left corner
@@ -253,6 +324,10 @@ UpdatePlayerPositionAndDirection::
     ; Player facing down
     ld a, PLAYER_FACE_DOWN
     ld [wPlayerDirection], a
+
+    ld hl, walking_down
+    ld d, walking_down_frame_count
+    call Animation_StartOrAdvanceFrame 
 
     ; Check collisions
     ; 1) Lower left corner
@@ -441,113 +516,109 @@ UpdatePlayerOAM::
     ld [wShadowOAM+(PLAYER_OAM_INDEX_UPPER_RIGHT * OBJ_SIZE)+OAMA_X], a
     ld [wShadowOAM+(PLAYER_OAM_INDEX_LOWER_RIGHT * OBJ_SIZE)+OAMA_X], a
 
-    ; OAM Tiles index
-    ld hl, PlayerDirectionToTileIndex
-    ld a, [wPlayerDirection]
-    ld d, 0
+    ; OAM Tiles index and attributes byte
+
+    ; Load the current animation start addr
+    ld a, [wCurrentAnimationAddr]
+    ld l, a
+    ld a, [wCurrentAnimationAddr+1]
+    ld h, a
+
+    ; Add the offset * 4 (4 tiles per animation frame)
+    ld a, [wCurrentAnimationFrameIndex]
     ld e, a
-    REPT 4
-    add hl, de
+    REPT 3
+    add e
     ENDR
+    ld e, a
+    ld d, 0
+    add hl, de
 
     ld d, h ; DE is the base addr of the current animation (+1 2 3 to get the right tile)
     ld e, l
 
-    ld a, [de]
+    ld a, [de] ; a is the tile we want in the source tileset. We need to convert it to the real one (lookup in tilemap)
     ld hl, character_tileset_tilemap
     ld b, 0
     ld c, a
     add hl, bc
-    ld a, [hl]
-    add PLAYER_START_TILE_ID
+    ld b, a
+    ld a, [hl] ; a is the real tile to use
+    add a, PLAYER_START_TILE_ID ; add the offset where we store tiles for player
     ld [wShadowOAM+(PLAYER_OAM_INDEX_UPPER_LEFT * OBJ_SIZE)+OAMA_TILEID], a
 
-    ld h, d
-    ld l, e
-
-    inc hl
-    ld a, [hl]
-
-    ld hl, character_tileset_tilemap
-    ld b, 0
-    ld c, a
-    add hl, bc
-    ld a, [hl]
-    add PLAYER_START_TILE_ID
-    ld [wShadowOAM+(PLAYER_OAM_INDEX_UPPER_RIGHT * OBJ_SIZE)+OAMA_TILEID], a
-
-    ld h, d
-    ld l, e
-    REPT 2
-    inc hl
-    ENDR
-    ld a, [hl]
-
-    ld hl, character_tileset_tilemap
-    ld b, 0
-    ld c, a
-    add hl, bc
-    ld a, [hl]
-    add PLAYER_START_TILE_ID
-    ld [wShadowOAM+(PLAYER_OAM_INDEX_LOWER_LEFT * OBJ_SIZE)+OAMA_TILEID], a
-
-    ld h, d
-    ld l, e
-    REPT 3
-    inc hl
-    ENDR
-    ld a, [hl]
-
-    ld hl, character_tileset_tilemap
-    ld b, 0
-    ld c, a
-    add hl, bc
-    ld a, [hl]
-    add PLAYER_START_TILE_ID
-    ld [wShadowOAM+(PLAYER_OAM_INDEX_LOWER_RIGHT * OBJ_SIZE)+OAMA_TILEID], a
-
-    ld h, d
-    ld l, e
-    ld a, [hl]
     ld hl, character_tileset_attribute_map
+    ld c, b
     ld b, 0
-    ld c, a
     add hl, bc
     ld a, [hl]
     ld [wShadowOAM+(PLAYER_OAM_INDEX_UPPER_LEFT * OBJ_SIZE)+OAMA_FLAGS], a
-    ld h, d
+
+    ld h, d ; get back the base address of the animation into hl
     ld l, e
-    REPT 1
-    inc hl
-    ENDR
-    ld a, [hl]
-    ld hl, character_tileset_attribute_map
+    inc hl ; increment it from last tile use and store it back into DE
+    ld d, h
+    ld e, l
+
+    ld a, [de] ; a is the tile we want in the source tileset. We need to convert it to the real one (lookup in tilemap)
+    ld hl, character_tileset_tilemap
     ld b, 0
     ld c, a
+    add hl, bc
+    ld b, a
+    ld a, [hl]
+    add PLAYER_START_TILE_ID ; add the offset where we store tiles for player
+    ld [wShadowOAM+(PLAYER_OAM_INDEX_UPPER_RIGHT * OBJ_SIZE)+OAMA_TILEID], a
+
+    ld hl, character_tileset_attribute_map
+    ld c, b
+    ld b, 0
     add hl, bc
     ld a, [hl]
     ld [wShadowOAM+(PLAYER_OAM_INDEX_UPPER_RIGHT * OBJ_SIZE)+OAMA_FLAGS], a
-    ld h, d
+
+    ld h, d ; get back the base address of the animation into hl
     ld l, e
-    REPT 2
-    inc hl
-    ENDR
-    ld a, [hl]
-    ld hl, character_tileset_attribute_map
+    inc hl ; increment it from last tile use and store it back into DE
+    ld d, h
+    ld e, l
+
+    ld a, [de] ; a is the tile we want in the source tileset. We need to convert it to the real one (lookup in tilemap)
+    ld hl, character_tileset_tilemap
     ld b, 0
     ld c, a
     add hl, bc
+    ld b, a
+    ld a, [hl]
+    add PLAYER_START_TILE_ID ; add the offset where we store tiles for player
+    ld [wShadowOAM+(PLAYER_OAM_INDEX_LOWER_LEFT * OBJ_SIZE)+OAMA_TILEID], a
+
+    ld hl, character_tileset_attribute_map
+    ld c, b
+    ld b, 0
+    add hl, bc
     ld a, [hl]
     ld [wShadowOAM+(PLAYER_OAM_INDEX_LOWER_LEFT * OBJ_SIZE)+OAMA_FLAGS], a
+
     ld h, d
     ld l, e
-    REPT 3
     inc hl
-    ENDR
-    ld a, [hl]
-    ld hl, character_tileset_attribute_map
+    ld d, h
+    ld e, l
+    ld a, [de] ; a is the tile we want in the source tileset. We need to convert it to the real one (lookup in tilemap)
+    
+    ld hl, character_tileset_tilemap
     ld b, 0
     ld c, a
+    add hl, bc
+    ld b, a
+    ld a, [hl]
+    add PLAYER_START_TILE_ID ; add the offset where we store tiles for player
+    ld [wShadowOAM+(PLAYER_OAM_INDEX_LOWER_RIGHT * OBJ_SIZE)+OAMA_TILEID], a
+
+    ld hl, character_tileset_attribute_map
+    ld c, b
+    ld b, 0
     add hl, bc
     ld a, [hl]
     ld [wShadowOAM+(PLAYER_OAM_INDEX_LOWER_RIGHT * OBJ_SIZE)+OAMA_FLAGS], a

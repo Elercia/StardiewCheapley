@@ -75,3 +75,21 @@ map_village_collisions:
 	db $1,$1,$1,$1,$1,$1,$1,$1,$1,$1,$1,$1,$1,$1,$1,$1,$1,$1,$1,$1,$1,$1,$1,$1,$1,$1,$1,$1,$1,$1,$1,$1
 
    .end
+
+SECTION "character_animation", ROM0, ALIGN[2]
+DEF walking_down_frame_count EQU 2
+walking_down:
+	db $0,$1,$10,$11
+	db $2,$3,$12,$13
+DEF walking_up_frame_count EQU 2
+walking_up:
+	db $4,$5,$14,$15
+	db $6,$7,$16,$17
+DEF walking_right_frame_count EQU 2
+walking_right:
+	db $8,$9,$18,$19
+	db $a,$b,$1a,$1b
+DEF walking_left_frame_count EQU 2
+walking_left:
+	db $c,$d,$1c,$1d
+	db $e,$f,$1e,$1f

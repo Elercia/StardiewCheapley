@@ -3,7 +3,7 @@ import subprocess
 import os
 import glob
 from sys import platform
-import csv 
+import sys
 
 class Tilset:
     input_image : str
@@ -25,6 +25,15 @@ class Level:
         self.level_name = p_level_name
         self.tileset_name = p_tileset_name
 
+class ObjectAnimation:
+    animation_file: str
+    name : str
+
+    def __init__(self, name : str, animation_file : str):
+        self.animation_file = animation_file
+        self.name = name
+        pass
+
 standalone_tilesets : list[Tilset] = [
     Tilset("../Data/font_tileset.png", "font_tileset"),
     #Tilset("../Data/directionnal_test_character_tileset.png", "character_tileset"),
@@ -33,6 +42,9 @@ standalone_tilesets : list[Tilset] = [
 ]
 levels : list[Level] = [
     Level("Village", "village_tileset")
+]
+animations : list[ObjectAnimation] = [
+    ObjectAnimation("character_animation", "../Data/character_animation.csv")
 ]
 
 max_level_tileset = 128 # Max 128 tile for a level
@@ -66,24 +78,19 @@ if __name__ == "__main__":
                         "--auto-palette", 
                         "--group-outputs",
                         #"--base-tile", "{}".format(max_level_tileset), 
-                        "-o", "../sources/gfx/{}.2bpp".format(tileset.name), 
+                        "-o", "../sources/gfx/{}.2bpp".format(tileset.name),
                         tileset.input_image]
 
         # In case of objects, we need to output tilemap an dattribute map as well as remove unique / mirrored tiles
         # NOTE: In the current release of RGBGFX, we do not have an option to store output tiles as 8x16
         #   The "--columns" args only READS the input as columns but with unique / mirrors, output can invalid for 8x16
         if tileset.object_sprite:
-            #args.append("--columns") # This option is useless
+            #rgbgfx_args.append("--columns") # This option is useless
             rgbgfx_args.append("--auto-attr-map")
             rgbgfx_args.extend(["--tilemap", "../sources/gfx/{}.tilemap".format(tileset.name)])
-            rgbgfx_args.extend(["--unique-tiles", "--mirror-x", "--mirror-y"])
+            rgbgfx_args.extend(["--unique-tiles", "--mirror-tiles"])
 
         subprocess.run(rgbgfx_args)
-
-        if tileset.object_sprite:
-            # In case of a object, we need to read the output tilemap and build a map
-            pass
-
 
         if tileset.object_sprite:
             gfx_file_content += (
@@ -167,5 +174,45 @@ if __name__ == "__main__":
             "   .end\n"
         ).format(content = tile_metadata_bin, id = output_name)
 
+    for animation in animations:
+
+        with open(animation.animation_file, "r") as animation_file:
+            processed_animations = ""
+
+            for line in animation_file:
+
+                line_split = line.split(",")
+
+                animation_name = line_split[0]
+                all_animation_tiles = line_split[1:-1]
+
+                if len(all_animation_tiles) % 4 != 0:
+                    print(f"Wrong animation tile count for animation {animation_name}", file=sys.stderr)
+
+                all_animations_frames_tiles = [all_animation_tiles[i:i + 4] for i in range(0, len(all_animation_tiles), 4)]
+
+                processed_animations += "DEF {animation_name}_frame_count EQU {count}\n".format(animation_name=animation_name, count=len(all_animations_frames_tiles))
+                processed_animations += f"{animation_name}:\n"
+
+                for animation_frame_tiles in all_animations_frames_tiles:
+                    processed_animation_tiles = []
+
+                    for animation_frame_tile_as_str in animation_frame_tiles:
+
+                        if animation_frame_tile_as_str != "\n":
+                            int_tile = int(animation_frame_tile_as_str)
+                            processed_animation_tiles.append(f'${int_tile:x}')
+
+                    processed_animations += "\tdb " + (",".join(processed_animation_tiles)) + "\n"
+
+                pass
+
+            gfx_file_content += (
+                "\nSECTION \"{animation_name}\", ROM0, ALIGN[2]\n"
+                ).format(animation_name = animation.name)
+            gfx_file_content += (
+                f"{processed_animations}"
+            )
+    
     with open("../sources/gfx/gfx.asm", "w") as f:
         f.write(gfx_file_content)

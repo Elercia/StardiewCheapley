@@ -1,4 +1,4 @@
-Section "Utils", 		ROM0
+SECTION "Utils", 		ROM0
 
 DEF TILE_DATA_START_ADDR EQU TILEBLOCK0
 DEF TILE_MAP_START_ADDR EQU TILEMAP0
@@ -41,8 +41,15 @@ MACRO CLEAR_16_BITS
     ld [hl], 0
 ENDM
 
+MACRO LOAD_16_BITS ; args: dest address, value
+    ld hl, \1
+    ld a, low(\2)
+    ld [hli], a
+    ld a, high(\2)
+    ld [hl], a
+ENDM
 
-MACRO COPY_16_BITS ; arg : source addr, dest addr
+MACRO COPY_16_BITS ; args : source addr, dest addr
     ld hl, \1 
     ld a, [hl]
     ld [\2], a
