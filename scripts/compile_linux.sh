@@ -9,7 +9,7 @@ cd build
 rm -f *.o *.sym *.map *.gb
 
 # Compile
-../bin/linux/rgbasm -o stardiewcheapley.o -I ../sources ../sources/stardiewcheapley.asm &&
-../bin/linux/rgblink -o stardiewcheapley.gb --map stardiewcheapley.map --sym stardiewcheapley.sym stardiewcheapley.o &&
-../bin/linux/rgbfix -v -p 0xFF --fix-spec lhg stardiewcheapley.gb &&
+../bin/linux/rgbasm -o stardewcheapley.o -I ../sources ../sources/stardewcheapley.asm &&
+../bin/linux/rgblink -o stardewcheapley.gb --map stardewcheapley.map --sym stardewcheapley.sym stardewcheapley.o &&
+../bin/linux/rgbfix -v -p 0xFF --fix-spec lhg stardewcheapley.gb &&
 echo Done

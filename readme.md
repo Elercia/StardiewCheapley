@@ -1,4 +1,4 @@
-# Stardiew Cheapley
+# stardew Cheapley
 
 # Licences
 - Village tileset by [whydesign](https://whydesign.itch.io/gameboy-tileset-free-4-color-village-tileset)

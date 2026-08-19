@@ -48,7 +48,7 @@ animations : list[ObjectAnimation] = [
 ]
 
 max_level_tileset = 128 # Max 128 tile for a level
-base_ldtk_export_path = "../Data/stardiew_cheapley/simplified/"
+base_ldtk_export_path = "../Data/stardew_cheapley/simplified/"
 
 if __name__ == "__main__":
     # Erase previous built files
