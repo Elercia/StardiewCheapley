@@ -142,8 +142,11 @@ EntryPoint:
 	call Gameplay_Update
 
 	call WaitVBlank
+	
+	di
 	ld  a, high(wShadowOAM)
  	call CopyShadowOAMToOAM
+	ei 
 
 	ld a, [wShadowScreenPositionX]
 	ld [rSCX], a
