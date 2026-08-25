@@ -44,6 +44,7 @@ SECTION "CodeStart", 		ROM0[$150]
 
 INCLUDE "gfx/gfx.asm"
 INCLUDE "gameplay.asm"
+INCLUDE "input.asm"
 
 ; OAM DMA Routine
 ; Reserve into HRAM some memory space to copy the code of CopyDMARoutine
@@ -130,6 +131,7 @@ EntryPoint:
 	ld a, %11100100
 	ld [rOBP1], a
 
+	call Input_Init
 	call Gameplay_Init
 
 	xor a
@@ -139,6 +141,7 @@ EntryPoint:
 	ei ; Enable interupts, used for Vblanks
 
 .loop
+	call Input_Update
 	call Gameplay_Update
 
 	call WaitVBlank
