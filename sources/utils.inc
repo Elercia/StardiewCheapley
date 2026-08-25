@@ -127,33 +127,3 @@ ELSE
 .end_multiply\@
 ENDC
 ENDM
-
-WaitVBlank:
-    ld hl, wVBlankInterrupt  ; hl = pointer to wVBlankInterrupt
-    xor a
-.wait
-    halt ; suspend CPU - wait for ANY enabled interrupt
-    cp a, [hl] ; is the wVBlankInterrupt still zero?
-    jr z, .wait ; keep waiting if zero
-    ld [hl], a ; set the wVBlankInterrupt back to zero
-
-    ret
-
-; Turn off the lcd for copy inside vram operations
-; Only unset the bit needed
-; invalidates a
-TurnOffLCD:
-    call WaitVBlank
-    ld a, [rLCDC]
-    res B_LCDC_ENABLE, a
-	ld [rLCDC], a
-    ret
-
-; Turn on the lcd for copy inside vram operations
-; Only unset the bit needed
-; invalidates a
-TurnOnLCD:
-    ld a, [rLCDC]
-    set B_LCDC_ENABLE, a
-    ld [rLCDC], a
-    ret

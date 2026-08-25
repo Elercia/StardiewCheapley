@@ -1,6 +1,3 @@
-SECTION "Interrupts Variables", WRAM0
-wVBlankInterrupt:: db
-
 SECTION "Screen Variables", WRAM0
 ; Shadowing of rSCX & rSCY to update only in vblanks (to avoid tearing)
 wShadowScreenPositionX:: db
@@ -35,7 +32,6 @@ DEF CROPS_SECTION_SIZE EQU CROPS_COUNT * CROPS_SIZE
 SECTION "Crops Variables", WRAM0
 wCropsData:: ds CROPS_SECTION_SIZE
 
-
 DEF PLAYER_SPEED EQU 1
 DEF PLAYER_ANIMATION_SPEED EQU 10 ; N frames per animation frame
 
@@ -61,23 +57,6 @@ DEF PLAYER_ACTION_TARGET_START_ADDR EQU TILE_DATA_START_ADDR + ( PLAYER_ACTION_T
 
 DEF TILE_MAP_METADATA_COLLISION EQU 1
 DEF TILE_MAP_METADATA_CULTIVABLE EQU 2
-
-; Interupts 
-SECTION "Vblank", 			ROM0[INT_HANDLER_VBLANK]
-    push af
-    ld a, 1
-    ld [wVBlankInterrupt], a
-    pop af
-	reti
-SECTION "LCDC", 			ROM0[INT_HANDLER_STAT]
-	reti
-SECTION "Timer_Overflow", 	ROM0[INT_HANDLER_TIMER]
-	reti
-SECTION "Serial", 			ROM0[INT_HANDLER_SERIAL]
-	reti
-SECTION "Joypad", 			ROM0[INT_HANDLER_JOYPAD]
-	reti
-
 
 SECTION "Player Code", ROM0
 
