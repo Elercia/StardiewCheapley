@@ -73,19 +73,19 @@ Divide::
 .done
     ret
 
-MACRO SetupStackArgs
+MACRO SetupFunctionStackVariables
     add sp, -_NARG ; make space for arguments
     FOR N, 1, _NARG+1
         DEF \<N> EQU N-1
     ENDR
 ENDM
 
-MACRO SetbackStackArgs
+MACRO SetbackFunctionStackVariables
     add sp, _NARG
 ENDM
 
-MACRO SetbackStackArgsAndNames
-    SetbackStackArgs \#
+MACRO SetbackFunctionStackVariablesAndNames
+    SetbackFunctionStackVariables \#
     FOR N, 1, _NARG+1
         PURGE \<N>
     ENDR

@@ -469,7 +469,7 @@ Gameplay_GetTileMetadata::
 
 UpdatePlayerAction:: 
     ; Loop through all the crops slots to search for one used with the same coordinates
-    SetupStackArgs LastUnusedCropsSpot
+    SetupFunctionStackVariables LastUnusedCropsSpot
 
     ; 1) We need to get the coordinate of the target tile
     ; 2) Check if it is a tile that is cultivable (metadata)
@@ -617,7 +617,7 @@ UpdatePlayerAction::
     ld a, CROPS_STATE_IS_VALID
     ld [hl], a
 
-    SetbackStackArgs LastUnusedCropsSpot
+    SetbackFunctionStackVariables LastUnusedCropsSpot
     ret
 
 .crops_found
@@ -629,7 +629,7 @@ UpdatePlayerAction::
     ld a, 0
     ld [hl], a
 
-    SetbackStackArgs LastUnusedCropsSpot
+    SetbackFunctionStackVariables LastUnusedCropsSpot
 
     ret
 
@@ -638,7 +638,7 @@ UpdatePlayerAction::
     ld [wPlayerActionHelperPositionX], a
     ld [wPlayerActionHelperPositionY], a
 
-    SetbackStackArgsAndNames LastUnusedCropsSpot
+    SetbackFunctionStackVariablesAndNames LastUnusedCropsSpot
 
     ret
 
