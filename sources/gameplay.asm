@@ -1,37 +1,3 @@
-SECTION "Screen Variables", WRAM0
-; Shadowing of rSCX & rSCY to update only in vblanks (to avoid tearing)
-wShadowScreenPositionX:: db
-wShadowScreenPositionY:: db
-
-SECTION "Player Variables", WRAM0
-; 2 bytes for pixel position in world. 
-; Have it as u16  is not useful right now but will be necessary when we will be using streaming
-;   And its challenging
-;   But too challging atm, so we don't use it 
-wPlayerPositionX:: dw 
-wPlayerPositionY:: dw
-wPlayerDirection:: db ; 1 byte for direction (only uses 2 bits)
-wPlayerActionHelperPositionX:: db
-wPlayerActionHelperPositionY:: db
-
-wCurrentAnimationAddr:: dw ; Address of the current animation
-wCurrentAnimationDelayBeforeNextFrame::db
-wCurrentAnimationFrameIndex::db
-wCurrentAnimationFrameCount::db ; Used to modulo the animation
-
-rsreset
-    DEF CROPS_STATE         rb ; offset 0, bitfield of useful data
-        DEF CROPS_STATE_IS_VALID EQU %00000001; 1 in this bit = is planted
-    DEF CROPS_POSITION_X    rb ; offset 1
-    DEF CROPS_POSITION_Y    rb ; offset 2
-    DEF CROPS_SIZE          rb 0 ; size of CROPS in bytes
-
-DEF CROPS_COUNT EQU 15
-DEF CROPS_SECTION_SIZE EQU CROPS_COUNT * CROPS_SIZE
-
-SECTION "Crops Variables", WRAM0
-wCropsData:: ds CROPS_SECTION_SIZE
-
 DEF PLAYER_SPEED EQU 1
 DEF PLAYER_ANIMATION_SPEED EQU 10 ; N frames per animation frame
 
@@ -58,12 +24,46 @@ DEF PLAYER_ACTION_TARGET_START_ADDR EQU TILE_DATA_START_ADDR + ( PLAYER_ACTION_T
 DEF TILE_MAP_METADATA_COLLISION EQU 1
 DEF TILE_MAP_METADATA_CULTIVABLE EQU 2
 
+rsreset
+    DEF CROPS_STATE         rb ; offset 0, bitfield of useful data
+        DEF CROPS_STATE_IS_VALID EQU %00000001; 1 in this bit = is planted
+    DEF CROPS_POSITION_X    rb ; offset 1
+    DEF CROPS_POSITION_Y    rb ; offset 2
+    DEF CROPS_SIZE          rb 0 ; size of CROPS in bytes
+
+DEF CROPS_COUNT EQU 15
+DEF CROPS_SECTION_SIZE EQU CROPS_COUNT * CROPS_SIZE
+
+SECTION "Screen Variables", WRAM0
+; Shadowing of rSCX & rSCY to update only in vblanks (to avoid tearing)
+wShadowScreenPositionX:: db
+wShadowScreenPositionY:: db
+
+SECTION "Player Variables", WRAM0
+; 2 bytes for pixel position in world. 
+; Have it as u16  is not useful right now but will be necessary when we will be using streaming
+;   And its challenging
+;   But too challging atm, so we don't use it 
+wPlayerPositionX:: dw 
+wPlayerPositionY:: dw
+wPlayerDirection:: db ; 1 byte for direction (only uses 2 bits)
+wPlayerActionHelperPositionX:: db
+wPlayerActionHelperPositionY:: db
+
+wCurrentAnimationAddr:: dw ; Address of the current animation
+wCurrentAnimationDelayBeforeNextFrame::db
+wCurrentAnimationFrameIndex::db
+wCurrentAnimationFrameCount::db ; Used to modulo the animation
+
+SECTION "Crops Variables", WRAM0
+wCropsData:: ds CROPS_SECTION_SIZE
+
 SECTION "Player Code", ROM0
 
 Gameplay_Init::
     call Gameplay_InitMap
     call Gameplay_InitPlayer
-
+ 
     ret
 
 Gameplay_InitMap::
