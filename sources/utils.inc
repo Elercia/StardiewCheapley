@@ -73,8 +73,31 @@ Divide::
 .done
     ret
 
+MACRO SetupStackArgs
+    add sp, -_NARG ; make space for arguments
+    FOR N, 1, _NARG+1
+        DEF \<N> EQU N-1
+    ENDR
+ENDM
+
+MACRO SetbackStackArgs
+    add sp, _NARG
+ENDM
+
+MACRO SetbackStackArgsAndNames
+    SetbackStackArgs \#
+    FOR N, 1, _NARG+1
+        PURGE \<N>
+    ENDR
+ENDM
+
+MACRO ldr16_r16 
+    ld \1 , \3
+    ld \2 , \4
+ENDM
+
 ; Multiply hl by arg1 (8 bits)
-; Invalidate af, d
+; Invalidate a, bc, d
 MACRO Multiply 
 IF \1 == 0
     ld hl, 0

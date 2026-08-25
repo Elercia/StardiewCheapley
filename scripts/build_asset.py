@@ -38,7 +38,8 @@ standalone_tilesets : list[Tilset] = [
     Tilset("../Data/font_tileset.png", "font_tileset"),
     #Tilset("../Data/directionnal_test_character_tileset.png", "character_tileset"),
     Tilset("../Data/character_tileset.png", "character_tileset", p_object_sprite=True),
-    Tilset("../Data/village_tileset.png", "village_tileset", p_include_in_rom = False)
+    Tilset("../Data/village_tileset.png", "village_tileset", p_include_in_rom = False),
+    Tilset("../Data/action_target.png", "action_target")
 ]
 levels : list[Level] = [
     Level("Village", "village_tileset")

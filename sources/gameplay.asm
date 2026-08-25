@@ -1,6 +1,8 @@
 SECTION "Joypad Variables", WRAM0
 wJoypadCurrent:: db ; TODO Move to another file "input.asm" 
 wJoypadPrevious:: db
+wButtonCurrent:: db ; TODO Move to another file "input.asm" 
+wButtonPrevious:: db
 
 SECTION "Interrupts Variables", WRAM0
 wVBlankInterrupt:: db
@@ -18,11 +20,27 @@ SECTION "Player Variables", WRAM0
 wPlayerPositionX:: dw 
 wPlayerPositionY:: dw
 wPlayerDirection:: db ; 1 byte for direction (only uses 2 bits)
+wPlayerActionHelperPositionX:: db
+wPlayerActionHelperPositionY:: db
 
 wCurrentAnimationAddr:: dw ; Address of the current animation
 wCurrentAnimationDelayBeforeNextFrame::db
 wCurrentAnimationFrameIndex::db
 wCurrentAnimationFrameCount::db ; Used to modulo the animation
+
+rsreset
+    DEF CROPS_STATE         rb ; offset 0, bitfield of useful data
+        DEF CROPS_STATE_IS_VALID EQU %00000001; 1 in this bit = is planted
+    DEF CROPS_POSITION_X    rb ; offset 1
+    DEF CROPS_POSITION_Y    rb ; offset 2
+    DEF CROPS_SIZE          rb 0 ; size of CROPS in bytes
+
+DEF CROPS_COUNT EQU 15
+DEF CROPS_SECTION_SIZE EQU CROPS_COUNT * CROPS_SIZE
+
+SECTION "Crops Variables", WRAM0
+wCropsData:: ds CROPS_SECTION_SIZE
+
 
 DEF PLAYER_SPEED EQU 1
 DEF PLAYER_ANIMATION_SPEED EQU 10 ; N frames per animation frame
@@ -39,10 +57,16 @@ DEF PLAYER_OAM_INDEX_UPPER_LEFT EQU 0
 DEF PLAYER_OAM_INDEX_UPPER_RIGHT EQU 1
 DEF PLAYER_OAM_INDEX_LOWER_LEFT EQU 2
 DEF PLAYER_OAM_INDEX_LOWER_RIGHT EQU 3
+DEF PLAYER_OAM_ACTION_TARGET EQU 4
 
 DEF PLAYER_START_TILE_ID EQU 80
+DEF PLAYER_TILESET_START_ADDR EQU TILE_DATA_START_ADDR + ( PLAYER_START_TILE_ID * TILE_SIZE)
+DEF PLAYER_TILSET_COUNT EQU (character_tileset_size / TILE_SIZE)
+DEF PLAYER_ACTION_TARGET_TILE_ID EQU PLAYER_START_TILE_ID + PLAYER_TILSET_COUNT
+DEF PLAYER_ACTION_TARGET_START_ADDR EQU TILE_DATA_START_ADDR + ( PLAYER_ACTION_TARGET_TILE_ID * TILE_SIZE)
 
 DEF TILE_MAP_METADATA_COLLISION EQU 1
+DEF TILE_MAP_METADATA_CULTIVABLE EQU 2
 
 ; Interupts 
 SECTION "Vblank", 			ROM0[INT_HANDLER_VBLANK]
@@ -73,9 +97,15 @@ Gameplay_InitMap::
 
     ; Copy tile data (village tiles & player tiles)
     MEMCOPY map_village_tileset, TILE_DATA_START_ADDR, map_village_tileset_size
-	MEMCOPY character_tileset, TILE_DATA_START_ADDR + ( PLAYER_START_TILE_ID * TILE_SIZE), character_tileset_size
+
+	MEMCOPY character_tileset, PLAYER_TILESET_START_ADDR, character_tileset_size
+    MEMCOPY action_target,PLAYER_ACTION_TARGET_START_ADDR, action_target_size
 
     MEMCOPY map_village_tilemap, TILE_MAP_START_ADDR, map_village_tilemap
+
+    ld de, CROPS_SECTION_SIZE
+    ld hl, wCropsData
+    call MemClear 
 
     ret
 
@@ -84,8 +114,13 @@ Gameplay_InitPlayer::
 
     ld [wJoypadCurrent], a
     ld [wJoypadPrevious], a
+    ld [wButtonCurrent], a
+    ld [wButtonPrevious], a
     ld [wShadowScreenPositionX], a
     ld [wShadowScreenPositionY], a
+
+    ld [wPlayerActionHelperPositionX], a
+    ld [wPlayerActionHelperPositionY], a
     
     CLEAR_16_BITS wPlayerPositionX
     CLEAR_16_BITS wPlayerPositionY
@@ -109,8 +144,9 @@ Gameplay_InitPlayer::
     ret
 
 UpdateInput::
+.read_pad
     ; Get joypad inputs
-    ld a, JOYP_GET_CTRL_PAD ; Load P1F_GET_DPAD flag into A to select reading the buttons
+    ld a, JOYP_GET_CTRL_PAD ; Load P1F_GET_DPAD flag into A to select reading the direction pad
     ld [rJOYP], a
 
     REPT 4 ; Repeat to stabilize input reading after select
@@ -126,6 +162,24 @@ UpdateInput::
     ; Update current inputs variable
     ld a, b
     ld [wJoypadCurrent], a
+.read_buttons
+    ; Get joypad inputs
+    ld a, JOYP_GET_BUTTONS ; Load JOYP_GET_BUTTONS flag into A to select reading the buttons
+    ld [rJOYP], a
+
+    REPT 4 ; Repeat to stabilize input reading after select
+    ld a, [rJOYP] ; Read the joypad inputs
+    ENDR
+
+    ld b, a ; Save the read data into b
+
+    ; Update old inputs with current ones
+    ld a, [wButtonCurrent]
+    ld [wButtonPrevious], a
+
+    ; Update current inputs variable
+    ld a, b
+    ld [wButtonCurrent], a
     
 .cleanup_input_read
     ld a, JOYP_GET_NONE ; Load JOYP_GET_NONE flag into A to disable input reading
@@ -488,6 +542,181 @@ Gameplay_GetTileMetadata::
     ld a, [hl] ; return value
     ret
 
+UpdatePlayerAction:: 
+    ; Loop through all the crops slots to search for one used with the same coordinates
+    SetupStackArgs LastUnusedCropsSpot
+
+    ; 1) We need to get the coordinate of the target tile
+    ; 2) Check if it is a tile that is cultivable (metadata)
+    ; Check if there is a crop already at this tile
+    ;   Place something if there is not,
+    ;   Remove the existing one without placing another one
+
+    ; 1)
+    ld a, [wPlayerDirection]
+    cp PLAYER_FACE_LEFT
+    jr nz, .check_right_x
+    ld a, [wPlayerPositionX]
+    sub TILE_WIDTH
+    ld d, a
+    jr .no_y_change
+.check_right_x
+    cp PLAYER_FACE_RIGHT
+    jr nz, .no_x_change
+    ld a, [wPlayerPositionX]
+    add PLAYER_SPRITE_WIDTH
+    ld d, a
+    jr .no_y_change
+.no_x_change
+    ld a, [wPlayerPositionX]
+    ld d, a
+.check_y
+    ld a, [wPlayerDirection]
+    cp PLAYER_FACE_UP
+    jr nz, .check_right_y
+    ld a, [wPlayerPositionY]
+    sub TILE_WIDTH
+    ld e, a
+    jr .end_check_direction
+.check_right_y
+    cp PLAYER_FACE_DOWN
+    jr nz, .no_y_change
+    ld a, [wPlayerPositionY]
+    add PLAYER_SPRITE_HEIGHT
+    ld e, a
+    jr .end_check_direction
+.no_y_change
+    ld a, [wPlayerPositionY]
+    ld e, a
+.end_check_direction
+
+    ; 2)
+    push de
+    call Gameplay_GetTileMetadata
+    pop de
+
+    cp a, TILE_MAP_METADATA_CULTIVABLE
+    jp nz, .not_cultivable_tile
+
+    ; Round down the position on the grid
+    REPT 3
+    srl d
+    srl e
+    ENDR
+    REPT 3
+    sla d
+    sla e
+    ENDR
+
+    ld a, d
+    ld [wPlayerActionHelperPositionX], a
+    ld a, e
+    ld [wPlayerActionHelperPositionY], a 
+
+    ; Has the user pressed the button "A"
+    ld a, [wButtonCurrent]
+    and B_JOYP_A ; Select only the a button
+    ret nz
+
+    ld hl, wCropsData
+    ldr16_r16 d, e, h, l
+    ld b, 0
+.find_already_existing_crops_loop
+    ; crops + it
+    ; inc it of CROPS_SIZE
+    push bc ; need to save BC because of b
+    ldr16_r16 h, l, d, e 
+    ld bc, CROPS_STATE
+    add hl, bc
+    ld a, [hl]
+    and CROPS_STATE_IS_VALID
+    jr z, .find_already_existing_crops_loop_incr_and_store_current_index
+
+    ldr16_r16 h, l, d, e
+    ld bc, CROPS_POSITION_X
+    add hl, bc
+    ld a, [wPlayerActionHelperPositionX]
+    ld c, a
+    ld a, [hl]
+    cp c
+    jr nz, .find_already_existing_crops_loop_incr
+    
+    ldr16_r16 h, l, d, e
+    ld bc, CROPS_POSITION_Y
+    add hl, bc
+    ld a, [wPlayerActionHelperPositionY]
+    ld c, a
+    ld a, [hl]
+    cp c
+    jr nz, .find_already_existing_crops_loop_incr
+    jr .crops_found
+.find_already_existing_crops_loop_incr
+    ldr16_r16 h, l, d, e
+    ld bc, CROPS_SIZE
+    add hl, bc
+    ldr16_r16 d, e, h, l
+    pop bc
+    inc b
+    cp CROPS_COUNT
+    jr nz, .find_already_existing_crops_loop ; on previous and
+    jr .crops_not_found
+.find_already_existing_crops_loop_incr_and_store_current_index
+    ld hl, sp+LastUnusedCropsSpot
+    ld a, b
+    ld [hl], a
+    jr .find_already_existing_crops_loop_incr
+
+.crops_not_found
+
+    ld hl, sp+LastUnusedCropsSpot
+    ld a, [hl]
+
+    ld h, 0
+    ld l, a
+    Multiply CROPS_SIZE
+    ld bc, wCropsData
+    add hl, bc
+
+    ld bc, CROPS_POSITION_X
+    add hl, bc
+    ld a, [wPlayerActionHelperPositionX]
+    ld [hl], a
+    ldr16_r16 h, l, d, e
+    ld bc, CROPS_POSITION_Y
+    add hl, bc
+    ld a, [wPlayerActionHelperPositionY]
+    ld [hl], a
+    ldr16_r16 h, l, d, e
+    ld bc, CROPS_STATE
+    add hl, bc
+    ld a, CROPS_STATE_IS_VALID
+    ld [hl], a
+
+    SetbackStackArgs LastUnusedCropsSpot
+    ret
+
+.crops_found
+    pop bc
+    ; ptr is still inside DE
+    ldr16_r16 h, l, d, e
+    ld bc, CROPS_STATE
+    add hl, bc
+    ld a, 0
+    ld [hl], a
+
+    SetbackStackArgs LastUnusedCropsSpot
+
+    ret
+
+.not_cultivable_tile
+    ld a, -16 ;  ? Set to be invisible
+    ld [wPlayerActionHelperPositionX], a
+    ld [wPlayerActionHelperPositionY], a
+
+    SetbackStackArgsAndNames LastUnusedCropsSpot
+
+    ret
+
 UpdatePlayerOAM::
     ; Update player OAM Data
 
@@ -623,11 +852,33 @@ UpdatePlayerOAM::
     ld a, [hl]
     ld [wShadowOAM+(PLAYER_OAM_INDEX_LOWER_RIGHT * OBJ_SIZE)+OAMA_FLAGS], a
 
+    ; Update Action target
+    ld a, [wShadowScreenPositionY]
+    ld b, a
+    ld a, [wPlayerActionHelperPositionY]
+    sub b
+    add 16 ; This is the OAM zone where tile are invisible (offset)
+    ld [wShadowOAM+(PLAYER_OAM_ACTION_TARGET * OBJ_SIZE)+OAMA_Y], a
+
+    ld a, [wShadowScreenPositionX]
+    ld b, a
+    ld a, [wPlayerActionHelperPositionX]
+    sub b
+    add 8 ; This is the OAM zone where tile are invisible (offset)
+    ld [wShadowOAM+(PLAYER_OAM_ACTION_TARGET * OBJ_SIZE)+OAMA_X], a
+
+    ld a, PLAYER_ACTION_TARGET_TILE_ID
+    ld [wShadowOAM+(PLAYER_OAM_ACTION_TARGET * OBJ_SIZE)+OAMA_TILEID], a
+
+    ld a, 0
+    ld [wShadowOAM+(PLAYER_OAM_ACTION_TARGET * OBJ_SIZE)+OAMA_FLAGS], a
+
     ret
 
 Gameplay_Update::
     call UpdateInput
     call UpdatePlayerPositionAndDirection
+    call UpdatePlayerAction
     call UpdatePlayerOAM
 
     ret
